@@ -32,67 +32,67 @@ import {
 const menuItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard/",
     icon: Home,
   },
   {
     title: "Projects",
-    url: "/projects",
+    url: "/dashboard/projects",
     icon: Building2,
   },
   {
     title: "Clients",
-    url: "/clients",
+    url: "/dashboard/clients",
     icon: Users,
   },
   {
     title: "Invoices",
-    url: "/invoices",
+    url: "/dashboard/invoices",
     icon: FileText,
   },
   {
     title: "Finances",
-    url: "/finances",
+    url: "/dashboard/finances",
     icon: DollarSign,
   },
   {
     title: "Employees",
-    url: "/employees",
+    url: "/dashboard/employees",
     icon: Users,
   },
   {
     title: "Time Tracking",
-    url: "/time-tracking",
+    url: "/dashboard/time-tracking",
     icon: Clock,
   },
   {
     title: "Tasks",
-    url: "/tasks",
+    url: "/dashboard/tasks",
     icon: CheckSquare,
   },
   {
     title: "Equipment",
-    url: "/equipment",
+    url: "/dashboard/equipment",
     icon: Wrench,
   },
   {
     title: "Materials",
-    url: "/materials",
+    url: "/dashboard/materials",
     icon: Package,
   },
   {
     title: "Documents",
-    url: "/documents",
+    url: "/dashboard/documents",
     icon: FolderOpen,
   },
   {
     title: "Reports",
-    url: "/reports",
+    url: "/dashboard/reports",
     icon: Calculator,
   },
   {
     title: "Settings",
-    url: "/settings",
+    url: "/dashboard/settings",
     icon: Settings,
   },
 ]
