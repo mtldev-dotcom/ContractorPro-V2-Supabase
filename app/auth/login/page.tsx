@@ -45,7 +45,7 @@ export default function LoginPage() {
       description: "Welcome back to ContractorPro!",
     })
 
-    router.push("/")
+        router.push("/dashboard")
     setIsLoading(false)
   }
 
