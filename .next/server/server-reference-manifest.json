@@ -1,39 +1,5 @@
 {
-  "node": {
-    "003292519a98929cade27c1a450886b36b5ba62675": {
-      "workers": {
-        "app/auth/login/page": {
-          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CAdmin_7530%5C%5CDesktop%5C%5Cdev%5C%5CcontractorV2%5C%5CContractorPro-V2%5C%5Capp%5C%5Cauth%5C%5Clogin%5C%5Cpage.tsx%22%2C%5B%7B%22id%22%3A%22003292519a98929cade27c1a450886b36b5ba62675%22%2C%22exportedName%22%3A%22default%22%7D%5D%5D%2C%5B%22C%3A%5C%5CUsers%5C%5CAdmin_7530%5C%5CDesktop%5C%5Cdev%5C%5CcontractorV2%5C%5CContractorPro-V2%5C%5Capp%5C%5Cauth%5C%5Clogin%5C%5Cactions.ts%22%2C%5B%7B%22id%22%3A%2240431a3e76d7733c6c76419bbf188df5bab4525aa8%22%2C%22exportedName%22%3A%22login%22%7D%2C%7B%22id%22%3A%22407fce3620f09f215ad982739add4b1c980c97940e%22%2C%22exportedName%22%3A%22signup%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        }
-      },
-      "layer": {
-        "app/auth/login/page": "rsc"
-      }
-    },
-    "40431a3e76d7733c6c76419bbf188df5bab4525aa8": {
-      "workers": {
-        "app/auth/login/page": {
-          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CAdmin_7530%5C%5CDesktop%5C%5Cdev%5C%5CcontractorV2%5C%5CContractorPro-V2%5C%5Capp%5C%5Cauth%5C%5Clogin%5C%5Cpage.tsx%22%2C%5B%7B%22id%22%3A%22003292519a98929cade27c1a450886b36b5ba62675%22%2C%22exportedName%22%3A%22default%22%7D%5D%5D%2C%5B%22C%3A%5C%5CUsers%5C%5CAdmin_7530%5C%5CDesktop%5C%5Cdev%5C%5CcontractorV2%5C%5CContractorPro-V2%5C%5Capp%5C%5Cauth%5C%5Clogin%5C%5Cactions.ts%22%2C%5B%7B%22id%22%3A%2240431a3e76d7733c6c76419bbf188df5bab4525aa8%22%2C%22exportedName%22%3A%22login%22%7D%2C%7B%22id%22%3A%22407fce3620f09f215ad982739add4b1c980c97940e%22%2C%22exportedName%22%3A%22signup%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        }
-      },
-      "layer": {
-        "app/auth/login/page": "rsc"
-      }
-    },
-    "407fce3620f09f215ad982739add4b1c980c97940e": {
-      "workers": {
-        "app/auth/login/page": {
-          "moduleId": "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5CAdmin_7530%5C%5CDesktop%5C%5Cdev%5C%5CcontractorV2%5C%5CContractorPro-V2%5C%5Capp%5C%5Cauth%5C%5Clogin%5C%5Cpage.tsx%22%2C%5B%7B%22id%22%3A%22003292519a98929cade27c1a450886b36b5ba62675%22%2C%22exportedName%22%3A%22default%22%7D%5D%5D%2C%5B%22C%3A%5C%5CUsers%5C%5CAdmin_7530%5C%5CDesktop%5C%5Cdev%5C%5CcontractorV2%5C%5CContractorPro-V2%5C%5Capp%5C%5Cauth%5C%5Clogin%5C%5Cactions.ts%22%2C%5B%7B%22id%22%3A%2240431a3e76d7733c6c76419bbf188df5bab4525aa8%22%2C%22exportedName%22%3A%22login%22%7D%2C%7B%22id%22%3A%22407fce3620f09f215ad982739add4b1c980c97940e%22%2C%22exportedName%22%3A%22signup%22%7D%5D%5D%5D&__client_imported__=!",
-          "async": false
-        }
-      },
-      "layer": {
-        "app/auth/login/page": "rsc"
-      }
-    }
-  },
+  "node": {},
   "edge": {},
   "encryptionKey": "IXt3/AzeYXJgUZfy/xpMsA3iVGsywzstXM3XNlVQPEM="
 }
