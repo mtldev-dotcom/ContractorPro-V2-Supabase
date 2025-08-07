@@ -433,6 +433,13 @@ CREATE TABLE IF NOT EXISTS payroll (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_companies (
+    user_id UUID REFERENCES users(id),
+    company_id UUID REFERENCES companies(id),
+    role VARCHAR(20) REFERENCES users(role),
+    PRIMARY KEY (user_id, company_id)
+);
+
 -- Create trigger for payroll
 CREATE TRIGGER update_payroll_updated_at
     BEFORE UPDATE ON payroll

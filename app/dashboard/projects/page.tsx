@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Search, Plus, Filter, MoreHorizontal, MapPin, Calendar, User } from "lucide-react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,162 +10,198 @@ import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { AddProjectModal } from "@/components/add-project-modal"
+import { createClient } from '@/utils/supabase/client';
 
+// Define the Project type
 interface Project {
-  id: string
-  name: string
-  description: string
-  project_number: string
-  status: string
-  priority: string
-  start_date: string
-  estimated_end_date: string
-  budget: number
-  contract_amount: number
-  site_address_line1: string
-  site_address_line2: string
-  site_city: string
-  site_state: string
-  site_zip_code: string
-  client: {
-    first_name: string
-    last_name: string
-  }
+  id: string; // UUID in database
+  project_number: string;
+  name: string;
+  description: string;
+  project_type: string;
+  status: 'planning' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  start_date: string;
+  estimated_end_date: string;
+  actual_end_date: string | null;
+  budget: number;
+  contract_amount: number;
+  site_address_line1: string;
+  site_address_line2: string;
+  site_city: string;
+  site_state: string;
+  site_zip_code: string;
+  client_id: string;
+  project_manager_id: string;
+  notes: string;
+  // Join with clients table
+  client?: {
+    first_name: string;
+    last_name: string;
+    company_name: string;
+  };
+  // Join with employees and users tables for project manager
+  project_manager?: {
+    id: string;
+    user_id: string;
+    users: {
+      first_name: string;
+      last_name: string;
+    };
+  };
 }
-
 export default function Projects() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchProjects() {
       try {
+        setIsLoading(true)
+        const supabase = createClient();
         const { data, error } = await supabase
-          .from('projects_new')
+          .from("projects_new")
           .select(`
             *,
-            client:clients(first_name, last_name)
-          `)
+            client:clients(first_name, last_name, company_name),
+            project_manager:employees(
+              id,
+              user_id,
+              users (
+                first_name,
+                last_name
+              )
+            )
+          `);
         
         if (error) {
-          throw error
+          throw error;
         }
-
-        if (data) {
-          setProjects(data)
-        }
-      } catch (error) {
-        console.error('Error fetching projects:', error)
+        
+        setProjects(data || []);
+      } catch (err: any) {
+        console.error("Error fetching projects:", err);
+        setError(err.message || "An unknown error occurred");
       } finally {
-        setLoading(false)
+        setIsLoading(false);
       }
     }
+    
+    fetchProjects();
+  }, []);
 
-    fetchProjects()
-  }, [supabase])
-
-  // Calculate stats
-  const activeProjects = projects.filter(p => p.status === 'in_progress')
-  const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
-  const totalSpent = projects.reduce((sum, p) => sum + (p.contract_amount || 0), 0)
-  
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading projects...</div>
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Loading Projects...</h2>
+          <Progress className="w-64 h-2" />
+        </div>
+      </div>
+    );
   }
-    {
-      id: 1,
-      name: "Maple Street Kitchen Renovation",
-      client: "Sarah Johnson",
-      address: "123 Maple Street, Springfield",
-      status: "In Progress",
-      progress: 75,
-      budget: 45000,
-      spent: 33750,
-      startDate: "2024-01-15",
-      dueDate: "2024-03-15",
-      description: "Complete kitchen renovation including cabinets, countertops, and appliances",
-    },
-    {
-      id: 2,
-      name: "Oak Avenue Bathroom Remodel",
-      client: "Mike Chen",
-      address: "456 Oak Avenue, Springfield",
-      status: "Nearly Complete",
-      progress: 90,
-      budget: 25000,
-      spent: 22500,
-      startDate: "2024-02-01",
-      dueDate: "2024-02-28",
-      description: "Master bathroom renovation with walk-in shower and double vanity",
-    },
-    {
-      id: 3,
-      name: "Pine Street Home Addition",
-      client: "Lisa Rodriguez",
-      address: "789 Pine Street, Springfield",
-      status: "In Progress",
-      progress: 45,
-      budget: 85000,
-      spent: 38250,
-      startDate: "2024-01-01",
-      dueDate: "2024-04-30",
-      description: "Two-story addition with family room and master suite",
-    },
-    {
-      id: 4,
-      name: "Elm Drive Deck Construction",
-      client: "Tom Wilson",
-      address: "321 Elm Drive, Springfield",
-      status: "Just Started",
-      progress: 20,
-      budget: 15000,
-      spent: 3000,
-      startDate: "2024-02-15",
-      dueDate: "2024-03-30",
-      description: "Large composite deck with built-in seating and pergola",
-    },
-    {
-      id: 5,
-      name: "Cedar Lane Roof Replacement",
-      client: "Jennifer Davis",
-      address: "654 Cedar Lane, Springfield",
-      status: "Planning",
-      progress: 5,
-      budget: 35000,
-      spent: 1750,
-      startDate: "2024-03-01",
-      dueDate: "2024-03-20",
-      description: "Complete roof replacement with architectural shingles",
-    },
-    {
-      id: 6,
-      name: "Birch Street Basement Finish",
-      client: "Robert Kim",
-      address: "987 Birch Street, Springfield",
-      status: "On Hold",
-      progress: 30,
-      budget: 28000,
-      spent: 8400,
-      startDate: "2024-01-20",
-      dueDate: "2024-04-15",
-      description: "Basement finishing with rec room, bathroom, and storage",
-    },
-  ]
+  
+  // Show error state
+  if (error) {
+    throw new Error(`Failed to load projects: ${error}`);
+  }
 
-  const getStatusColor = (status: string) => {
+  // const projects = [
+  //   {
+  //     id: 1,
+  //     name: "Maple Street Kitchen Renovation",
+  //     client: "Sarah Johnson",
+  //     address: "123 Maple Street, Springfield",
+  //     status: "In Progress",
+  //     progress: 75,
+  //     budget: 45000,
+  //     spent: 33750,
+  //     startDate: "2024-01-15",
+  //     dueDate: "2024-03-15",
+  //     description: "Complete kitchen renovation including cabinets, countertops, and appliances",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Oak Avenue Bathroom Remodel",
+  //     client: "Mike Chen",
+  //     address: "456 Oak Avenue, Springfield",
+  //     status: "Nearly Complete",
+  //     progress: 90,
+  //     budget: 25000,
+  //     spent: 22500,
+  //     startDate: "2024-02-01",
+  //     dueDate: "2024-02-28",
+  //     description: "Master bathroom renovation with walk-in shower and double vanity",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Pine Street Home Addition",
+  //     client: "Lisa Rodriguez",
+  //     address: "789 Pine Street, Springfield",
+  //     status: "In Progress",
+  //     progress: 45,
+  //     budget: 85000,
+  //     spent: 38250,
+  //     startDate: "2024-01-01",
+  //     dueDate: "2024-04-30",
+  //     description: "Two-story addition with family room and master suite",
+  //   },
+  //   {
+  //     id: 4,
+  //     name: "Elm Drive Deck Construction",
+  //     client: "Tom Wilson",
+  //     address: "321 Elm Drive, Springfield",
+  //     status: "Just Started",
+  //     progress: 20,
+  //     budget: 15000,
+  //     spent: 3000,
+  //     startDate: "2024-02-15",
+  //     dueDate: "2024-03-30",
+  //     description: "Large composite deck with built-in seating and pergola",
+  //   },
+  //   {
+  //     id: 5,
+  //     name: "Cedar Lane Roof Replacement",
+  //     client: "Jennifer Davis",
+  //     address: "654 Cedar Lane, Springfield",
+  //     status: "Planning",
+  //     progress: 5,
+  //     budget: 35000,
+  //     spent: 1750,
+  //     startDate: "2024-03-01",
+  //     dueDate: "2024-03-20",
+  //     description: "Complete roof replacement with architectural shingles",
+  //   },
+  //   {
+  //     id: 6,
+  //     name: "Birch Street Basement Finish",
+  //     client: "Robert Kim",
+  //     address: "987 Birch Street, Springfield",
+  //     status: "On Hold",
+  //     progress: 30,
+  //     budget: 28000,
+  //     spent: 8400,
+  //     startDate: "2024-01-20",
+  //     dueDate: "2024-04-15",
+  //     description: "Basement finishing with rec room, bathroom, and storage",
+  //   },
+  // ]
+
+  const getStatusColor = (status: Project['status']) => {
     switch (status) {
-      case "In Progress":
+      case "in_progress":
         return "default"
-      case "Nearly Complete":
+      case "completed":
         return "secondary"
-      case "Just Started":
+      case "planning":
         return "outline"
-      case "Planning":
-        return "secondary"
-      case "On Hold":
+      case "on_hold":
+        return "destructive"
+      case "cancelled":
         return "destructive"
       default:
         return "default"
@@ -176,9 +211,13 @@ export default function Projects() {
   const filteredProjects = projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.client.toLowerCase().includes(searchQuery.toLowerCase()),
+      (project.client && (
+        `${project.client.first_name} ${project.client.last_name} ${project.client.company_name || ''}`
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      )) ||
+      project.project_number.toLowerCase().includes(searchQuery.toLowerCase()),
   )
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
@@ -247,7 +286,9 @@ export default function Projects() {
                     <CardTitle className="text-lg leading-tight">{project.name}</CardTitle>
                     <CardDescription className="flex items-center gap-1">
                       <User className="h-3 w-3" />
-                      {project.client}
+                      {project.client ? 
+                        `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}`
+                        : 'No Client Assigned'}
                     </CardDescription>
                   </div>
                   <DropdownMenu>
@@ -264,42 +305,52 @@ export default function Projects() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <Badge variant={getStatusColor(project.status)} className="w-fit">
-                  {project.status}
+                <Badge variant={getStatusColor(project.status)} className="w-fit capitalize">
+                  {project.status.replace('_', ' ')}
                 </Badge>
+                {project.priority && (
+                  <Badge variant="outline" className="w-fit capitalize ml-2">
+                    {project.priority}
+                  </Badge>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-3 w-3" />
-                    {project.address}
+                    {[project.site_address_line1, project.site_address_line2, project.site_city, project.site_state, project.site_zip_code]
+                      .filter(Boolean)
+                      .join(', ')}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-3 w-3" />
-                    Due: {new Date(project.dueDate).toLocaleDateString()}
+                    Due: {project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : 'Not set'}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress</span>
-                    <span>{project.progress}%</span>
+                {project.project_manager && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      Project Manager: {project.project_manager.users.first_name} {project.project_manager.users.last_name}
+                    </div>
                   </div>
-                  <Progress value={project.progress} className="h-2" />
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Budget</span>
-                    <span className="font-medium">${project.budget.toLocaleString()}</span>
+                    <span className="font-medium">${(project.budget || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Spent</span>
-                    <span className="font-medium">${project.spent.toLocaleString()}</span>
+                    <span>Contract Amount</span>
+                    <span className="font-medium">${(project.contract_amount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm font-medium border-t pt-2">
-                    <span>Remaining</span>
-                    <span className="text-green-600">${(project.budget - project.spent).toLocaleString()}</span>
+                    <span>Difference</span>
+                    <span className={project.contract_amount >= project.budget ? "text-green-600" : "text-red-600"}>
+                      ${(project.contract_amount - project.budget).toLocaleString()}
+                    </span>
                   </div>
                 </div>
 
