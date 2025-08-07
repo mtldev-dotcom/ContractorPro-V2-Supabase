@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "db:migrate": "psql $DATABASE_URL -f scripts/migration-to-new-schema.sql",
-    "db:seed": "psql $DATABASE_URL -f scripts/seed-enhanced-data.sql",
+    "db:migrate": "psql $DATABASE_URL -f scripts/fixed-migration.sql",
+    "db:seed": "psql $DATABASE_URL -f scripts/seed-data.sql",
     "db:reset": "psql $DATABASE_URL -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run db:migrate && npm run db:seed",
     "db:backup": "./scripts/backup-database.sh",
     "db:restore": "./scripts/restore-database.sh"
