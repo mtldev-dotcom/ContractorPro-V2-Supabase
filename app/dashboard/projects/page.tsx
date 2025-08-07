@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Plus, Filter, MoreHorizontal, MapPin, Calendar, User } from "lucide-react"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,11 +12,70 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { AddProjectModal } from "@/components/add-project-modal"
 
+interface Project {
+  id: string
+  name: string
+  description: string
+  project_number: string
+  status: string
+  priority: string
+  start_date: string
+  estimated_end_date: string
+  budget: number
+  contract_amount: number
+  site_address_line1: string
+  site_address_line2: string
+  site_city: string
+  site_state: string
+  site_zip_code: string
+  client: {
+    first_name: string
+    last_name: string
+  }
+}
+
 export default function Projects() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const supabase = createClientComponentClient()
 
-  const projects = [
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const { data, error } = await supabase
+          .from('projects_new')
+          .select(`
+            *,
+            client:clients(first_name, last_name)
+          `)
+        
+        if (error) {
+          throw error
+        }
+
+        if (data) {
+          setProjects(data)
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [supabase])
+
+  // Calculate stats
+  const activeProjects = projects.filter(p => p.status === 'in_progress')
+  const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
+  const totalSpent = projects.reduce((sum, p) => sum + (p.contract_amount || 0), 0)
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading projects...</div>
+  }
     {
       id: 1,
       name: "Maple Street Kitchen Renovation",
