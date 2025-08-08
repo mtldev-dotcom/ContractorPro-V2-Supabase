@@ -25,3 +25,5 @@ yarn-error.log*
 next-env.d.ts
 
 .dev
+
+.cursor/mcp.json
