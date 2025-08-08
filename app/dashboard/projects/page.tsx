@@ -61,7 +61,15 @@ export default function Projects() {
     async function fetchProjects() {
       try {
         setIsLoading(true)
+        setError(null)
         const supabase = createClient();
+
+        // First, let's check if the user is authenticated
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) {
+          throw new Error("Authentication required to view projects");
+        }
+
         const { data, error } = await supabase
           .from("projects_new")
           .select(`
@@ -75,13 +83,25 @@ export default function Projects() {
                 last_name
               )
             )
-          `);
-        
+          `)
+          .order('created_at', { ascending: false });
+
         if (error) {
-          throw error;
+          console.error("Supabase error:", error);
+          throw new Error(`Failed to fetch projects: ${error.message}`);
         }
-        
-        setProjects(data || []);
+
+        // Filter out any projects with null client data to prevent rendering errors
+        const validProjects = (data || []).filter(project => {
+          // Ensure project has required fields
+          if (!project.name || !project.id) {
+            console.warn("Project missing required fields:", project);
+            return false;
+          }
+          return true;
+        });
+
+        setProjects(validProjects);
       } catch (err: any) {
         console.error("Error fetching projects:", err);
         setError(err.message || "An unknown error occurred");
@@ -89,7 +109,7 @@ export default function Projects() {
         setIsLoading(false);
       }
     }
-    
+
     fetchProjects();
   }, []);
 
@@ -104,10 +124,23 @@ export default function Projects() {
       </div>
     );
   }
-  
+
   // Show error state
   if (error) {
-    throw new Error(`Failed to load projects: ${error}`);
+    return (
+      <div className="flex flex-col min-h-screen items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Error Loading Projects</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
   }
 
 
@@ -131,7 +164,7 @@ export default function Projects() {
   const filteredProjects = projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (project.client && (
+      (project.client && project.client.first_name && project.client.last_name && (
         `${project.client.first_name} ${project.client.last_name} ${project.client.company_name || ''}`
           .toLowerCase()
           .includes(searchQuery.toLowerCase())
@@ -197,97 +230,110 @@ export default function Projects() {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg leading-tight">{project.name}</CardTitle>
-                    <CardDescription className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {project.client ? 
-                        `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}`
-                        : 'No Client Assigned'}
-                    </CardDescription>
+        {filteredProjects.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold mb-2">No Projects Found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery ? 'No projects match your search criteria.' : 'No projects have been created yet.'}
+            </p>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Project
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <Card key={project.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg leading-tight">{project.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {project.client && project.client.first_name && project.client.last_name ?
+                          `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}`
+                          : 'No Client Assigned'}
+                      </CardDescription>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>Edit Project</DropdownMenuItem>
+                        <DropdownMenuItem>Add Payment</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">Archive</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>Edit Project</DropdownMenuItem>
-                      <DropdownMenuItem>Add Payment</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">Archive</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Badge variant={getStatusColor(project.status)} className="w-fit capitalize">
-                  {project.status.replace('_', ' ')}
-                </Badge>
-                {project.priority && (
-                  <Badge variant="outline" className="w-fit capitalize ml-2">
-                    {project.priority}
+                  <Badge variant={getStatusColor(project.status)} className="w-fit capitalize">
+                    {project.status.replace('_', ' ')}
                   </Badge>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {[project.site_address_line1, project.site_address_line2, project.site_city, project.site_state, project.site_zip_code]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    Due: {project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : 'Not set'}
-                  </div>
-                </div>
-
-                {project.project_manager && (
+                  {project.priority && (
+                    <Badge variant="outline" className="w-fit capitalize ml-2">
+                      {project.priority}
+                    </Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      Project Manager: {project.project_manager.users.first_name} {project.project_manager.users.last_name}
+                      <MapPin className="h-3 w-3" />
+                      {[project.site_address_line1, project.site_address_line2, project.site_city, project.site_state, project.site_zip_code]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      Due: {project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : 'Not set'}
                     </div>
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Budget</span>
-                    <span className="font-medium">${(project.budget || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Contract Amount</span>
-                    <span className="font-medium">${(project.contract_amount || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-medium border-t pt-2">
-                    <span>Difference</span>
-                    <span className={project.contract_amount >= project.budget ? "text-green-600" : "text-red-600"}>
-                      ${(project.contract_amount - project.budget).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
+                  {project.project_manager && project.project_manager.users && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        Project Manager: {project.project_manager.users.first_name} {project.project_manager.users.last_name}
+                      </div>
+                    </div>
+                  )}
 
-                <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Budget</span>
+                      <span className="font-medium">${(project.budget || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Contract Amount</span>
+                      <span className="font-medium">${(project.contract_amount || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium border-t pt-2">
+                      <span>Difference</span>
+                      <span className={project.contract_amount >= project.budget ? "text-green-600" : "text-red-600"}>
+                        ${(project.contract_amount - project.budget).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
 
-                <div className="flex gap-2 pt-2">
-                  <Button size="sm" className="flex-1">
-                    View Details
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1">
-                    Edit
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button size="sm" className="flex-1">
+                      View Details
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1">
+                      Edit
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <AddProjectModal open={showAddModal} onOpenChange={setShowAddModal} />

@@ -18,11 +18,13 @@ export async function GET(request: NextRequest) {
       token_hash,
     })
     if (!error) {
+      console.log('User confirmed email')
       // redirect user to specified redirect URL or root of app
       redirect(next)
     }
   }
 
+  console.log('User did not confirm email')
   // redirect the user to an error page with some instructions
   redirect('/error')
 }
