@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { AddProjectModal } from "@/components/add-project-modal"
+import { EditProjectModal } from '@/components/edit-project-modal';
 import { createClient } from '@/utils/supabase/client';
 
 // Define the Project type
@@ -53,6 +54,8 @@ interface Project {
 export default function Projects() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -171,6 +174,12 @@ export default function Projects() {
       )) ||
       project.project_number.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
+  const handleEditClick = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setShowEditModal(true);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
@@ -251,8 +260,8 @@ export default function Projects() {
                       <CardTitle className="text-lg leading-tight">{project.name}</CardTitle>
                       <CardDescription className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        {project.client && project.client.first_name && project.client.last_name ?
-                          `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}`
+                        {project.client && project.client.first_name && project.client.last_name ? 
+                          `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}` 
                           : 'No Client Assigned'}
                       </CardDescription>
                     </div>
@@ -264,7 +273,7 @@ export default function Projects() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit Project</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(project.id)}>Edit Project</DropdownMenuItem>
                         <DropdownMenuItem>Add Payment</DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">Archive</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -325,7 +334,12 @@ export default function Projects() {
                     <Button size="sm" className="flex-1">
                       View Details
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleEditClick(project.id)}
+                    >
                       Edit
                     </Button>
                   </div>
@@ -337,6 +351,11 @@ export default function Projects() {
       </div>
 
       <AddProjectModal open={showAddModal} onOpenChange={setShowAddModal} />
+      <EditProjectModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        projectId={selectedProjectId!}
+      />
     </div>
   )
 }

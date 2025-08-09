@@ -1,9 +1,7 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +9,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
-import { createClient } from '@/utils/supabase/client';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { createClient } from "@/utils/supabase/client";
+
+interface EditProjectModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId: string;
+}
 
 interface Client {
   id: string;
@@ -26,13 +36,8 @@ interface Client {
   company_name: string | null;
 }
 
-interface AddProjectModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
-  const { toast } = useToast()
+export function EditProjectModal({ open, onOpenChange, projectId }: EditProjectModalProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     client: "",
@@ -42,103 +47,101 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
     dueDate: "",
     description: "",
     status: "Planning",
-  })
+  });
+
   const [clients, setClients] = useState<Client[]>([]);
-  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchClients() {
       const supabase = createClient();
-      const { data, error } = await supabase.from('clients').select('id, first_name, last_name, company_name');
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, first_name, last_name, company_name");
 
       if (error) {
-        console.error('Error fetching clients:', error);
+        console.error("Error fetching clients:", error);
         return;
       }
 
       setClients(data || []);
     }
 
-    async function fetchCompanyId() {
+    async function fetchProjectDetails() {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from('user_companies')
-        .select('company_id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .from("projects_new")
+        .select("*")
+        .eq("id", projectId)
         .single();
 
       if (error) {
-        console.error('Error fetching company ID:', error);
+        console.error("Error fetching project details:", error);
         return;
       }
 
-      setCompanyId(data?.company_id || null);
+      setFormData({
+        name: data.name,
+        client: data.client_id,
+        address: data.site_address_line1,
+        budget: data.budget.toString(),
+        startDate: data.start_date,
+        dueDate: data.estimated_end_date,
+        description: data.description,
+        status: data.status,
+      });
     }
 
-    fetchClients();
-    fetchCompanyId();
-  }, []);
+    if (open) {
+      fetchClients();
+      fetchProjectDetails();
+    }
+  }, [open, projectId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const supabase = createClient()
+    const supabase = createClient();
 
     try {
-      if (!companyId) {
-        throw new Error('Company ID is required to create a project.')
-      }
-
-      const { error } = await supabase.from('projects_new').insert([
-        {
+      const { error } = await supabase
+        .from("projects_new")
+        .update({
           name: formData.name,
-          client_id: formData.client, // Assuming client_id is the correct column
+          client_id: formData.client,
           site_address_line1: formData.address,
           budget: parseFloat(formData.budget),
           start_date: formData.startDate,
           estimated_end_date: formData.dueDate,
           description: formData.description,
-          status: formData.status.toLowerCase().replace(' ', '_'),
-          company_id: companyId, // Include company_id
-        },
-      ])
+          status: formData.status.toLowerCase().replace(" ", "_"),
+        })
+        .eq("id", projectId);
 
       if (error) {
-        throw error
+        throw error;
       }
 
       toast({
-        title: 'Project Created',
-        description: `${formData.name} has been added successfully.`,
-      })
+        title: "Project Updated",
+        description: `${formData.name} has been updated successfully.`,
+      });
 
-      // Reset form and close modal
-      setFormData({
-        name: '',
-        client: '',
-        address: '',
-        budget: '',
-        startDate: '',
-        dueDate: '',
-        description: '',
-        status: 'Planning',
-      })
-      onOpenChange(false)
+      onOpenChange(false);
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to create project.',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: error.message || "Failed to update project.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Project</DialogTitle>
-          <DialogDescription>Create a new project to track progress and manage resources.</DialogDescription>
+          <DialogTitle>Edit Project</DialogTitle>
+          <DialogDescription>Update the project details below.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -148,7 +151,6 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Kitchen Renovation"
                 required
               />
             </div>
@@ -164,7 +166,7 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
                 <SelectContent>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.first_name} {client.last_name} ({client.company_name || 'No Company'})
+                      {client.first_name} {client.last_name} ({client.company_name || "No Company"})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -176,7 +178,6 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="123 Main Street, City, State"
                 required
               />
             </div>
@@ -188,13 +189,15 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
                   type="number"
                   value={formData.budget}
                   onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                  placeholder="50000"
                   required
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -234,7 +237,6 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of the project scope..."
                 rows={3}
               />
             </div>
@@ -243,10 +245,10 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">Create Project</Button>
+            <Button type="submit">Update Project</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
