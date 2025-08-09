@@ -110,6 +110,7 @@ export default function TimeTracking() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Time Tracking</h1>
+          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
           <div className="text-sm text-muted-foreground">Current Time: {getCurrentTime()}</div>
         </div>
         <div className="flex items-center gap-4">

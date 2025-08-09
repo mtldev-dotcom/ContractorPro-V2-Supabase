@@ -165,6 +165,7 @@ export default function Documents() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Document Management</h1>
+          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">

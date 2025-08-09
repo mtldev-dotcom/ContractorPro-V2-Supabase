@@ -159,6 +159,7 @@ export default function Materials() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Materials & Inventory</h1>
+          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
@@ -261,13 +262,12 @@ export default function Materials() {
                       </div>
                       <Progress
                         value={Math.min(stockPercentage, 100)}
-                        className={`h-2 ${
-                          stockStatus === "critical"
+                        className={`h-2 ${stockStatus === "critical"
                             ? "[&>div]:bg-red-500"
                             : stockStatus === "low"
                               ? "[&>div]:bg-yellow-500"
                               : "[&>div]:bg-green-500"
-                        }`}
+                          }`}
                       />
                     </div>
                   </div>

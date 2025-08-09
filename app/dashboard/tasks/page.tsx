@@ -178,6 +178,7 @@ export default function Tasks() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Tasks</h1>
+          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
@@ -244,9 +245,8 @@ export default function Tasks() {
                 return (
                   <div
                     key={task.id}
-                    className={`p-4 border rounded-lg hover:shadow-sm transition-shadow ${
-                      task.completed ? "bg-muted/50" : ""
-                    } ${isOverdue ? "border-red-200 bg-red-50/50" : ""}`}
+                    className={`p-4 border rounded-lg hover:shadow-sm transition-shadow ${task.completed ? "bg-muted/50" : ""
+                      } ${isOverdue ? "border-red-200 bg-red-50/50" : ""}`}
                   >
                     <div className="flex items-start gap-4">
                       <Checkbox checked={task.completed} className="mt-1" />

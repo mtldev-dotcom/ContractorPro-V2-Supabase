@@ -251,7 +251,7 @@ export default function Clients() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Clients & Contacts</h1>
-          <p className="text-sm text-muted-foreground">This page has not been touched, dummy data only.</p>
+          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">

@@ -121,6 +121,7 @@ export default function Finances() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Finances</h1>
+          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
@@ -200,9 +201,8 @@ export default function Finances() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{category.name}</span>
                     <span
-                      className={`text-sm font-medium ${
-                        category.type === "income" ? "text-green-600" : "text-red-600"
-                      }`}
+                      className={`text-sm font-medium ${category.type === "income" ? "text-green-600" : "text-red-600"
+                        }`}
                     >
                       {category.type === "income" ? "+" : ""}${Math.abs(category.amount).toLocaleString()}
                     </span>
@@ -246,9 +246,8 @@ export default function Finances() {
                         </Badge>
                       </TableCell>
                       <TableCell
-                        className={`text-right font-medium ${
-                          transaction.type === "income" ? "text-green-600" : "text-red-600"
-                        }`}
+                        className={`text-right font-medium ${transaction.type === "income" ? "text-green-600" : "text-red-600"
+                          }`}
                       >
                         {transaction.type === "income" ? "+" : ""}${Math.abs(transaction.amount).toLocaleString()}
                       </TableCell>
