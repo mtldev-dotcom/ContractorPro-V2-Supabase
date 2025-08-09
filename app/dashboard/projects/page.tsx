@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Search, Plus, Filter, MoreHorizontal, MapPin, Calendar, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,110 +14,30 @@ import { AddProjectModal } from "@/components/add-project-modal"
 import { EditProjectModal } from '@/components/edit-project-modal';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getStatusBadgeVariant, formatStatusLabel, PROJECT_STATUSES, type Project, type ProjectStatus } from '@/lib/projects'
+import { useProjects } from '@/hooks/use-projects'
 
-// Define the Project type
-interface Project {
-  id: string; // UUID in database
-  project_number: string;
-  name: string;
-  description: string;
-  project_type: string;
-  status: 'planning' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  start_date: string;
-  estimated_end_date: string;
-  actual_end_date: string | null;
-  budget: number;
-  contract_amount: number;
-  site_address_line1: string;
-  site_address_line2: string;
-  site_city: string;
-  site_state: string;
-  site_zip_code: string;
-  client_id: string;
-  project_manager_id: string;
-  notes: string;
-  // Join with clients table
-  client?: {
-    first_name: string;
-    last_name: string;
-    company_name: string;
-  };
-  // Join with employees and users tables for project manager
-  project_manager?: {
-    id: string;
-    user_id: string;
-    users: {
-      first_name: string;
-      last_name: string;
-    };
-  };
-}
 export default function Projects() {
   const { toast } = useToast();
+  // Search, status filter, pagination are managed by useProjects
+  const { projects, isLoading, error, total, page, pageSize, setSearch, setStatus, setPage, refresh } = useProjects({
+    pageSize: 12,
+    status: 'all',
+  })
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const fetchProjects = async (showLoader: boolean = false) => {
-    try {
-      if (showLoader) setIsLoading(true)
-      setError(null)
-      const supabase = createClient();
-
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        throw new Error("Authentication required to view projects");
-      }
-
-      const { data, error } = await supabase
-        .from("projects_new")
-        .select(`
-          *,
-          client:clients(first_name, last_name, company_name),
-          project_manager:employees(
-            id,
-            user_id,
-            users (
-              first_name,
-              last_name
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Supabase error:", error);
-        throw new Error(`Failed to fetch projects: ${error.message}`);
-      }
-
-      const validProjects = (data || []).filter(project => {
-        if (!project.name || !project.id) {
-          console.warn("Project missing required fields:", project);
-          return false;
-        }
-        return true;
-      });
-
-      setProjects(validProjects);
-    } catch (err: any) {
-      console.error("Error fetching projects:", err);
-      setError(err.message || "An unknown error occurred");
-    } finally {
-      if (showLoader) setIsLoading(false);
-    }
+  // Bind local search input to shared hook's search
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setSearch(value)
   }
-
-  useEffect(() => {
-    fetchProjects(true);
-  }, []);
 
   // Show loading state
   if (isLoading) {
@@ -150,33 +70,9 @@ export default function Projects() {
   }
 
 
-  const getStatusColor = (status: Project['status']) => {
-    switch (status) {
-      case "in_progress":
-        return "default"
-      case "completed":
-        return "secondary"
-      case "planning":
-        return "outline"
-      case "on_hold":
-        return "destructive"
-      case "cancelled":
-        return "destructive"
-      default:
-        return "default"
-    }
-  }
+  const getStatusColor = (status: Project['status']) => getStatusBadgeVariant(status)
 
-  const filteredProjects = projects.filter(
-    (project) =>
-      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (project.client && project.client.first_name && project.client.last_name && (
-        `${project.client.first_name} ${project.client.last_name} ${project.client.company_name || ''}`
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      )) ||
-      project.project_number.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const filteredProjects = projects // server-side filter/search handled in hook (kept for compatibility)
 
   const handleEditClick = (projectId: string) => {
     setSelectedProjectId(projectId);
@@ -200,7 +96,7 @@ export default function Projects() {
         description: `${projectName} has been archived.`,
       });
 
-      fetchProjects();
+      refresh();
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -256,7 +152,7 @@ export default function Projects() {
 
       setDeleteDialogOpen(false)
       setDeleteTarget(null)
-      fetchProjects()
+      refresh()
     } catch (err: any) {
       toast({
         title: 'Delete Failed',
@@ -282,14 +178,24 @@ export default function Projects() {
             <Input
               placeholder="Search projects..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 w-64"
             />
           </div>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
+          {/* Status Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            <select
+              className="border rounded px-2 py-1 text-sm bg-background"
+              value={statusFilter}
+              onChange={(e) => { const v = e.target.value as ProjectStatus | 'all'; setStatusFilter(v); setStatus(v); setPage(1); }}
+            >
+              <option value="all">All statuses</option>
+              {PROJECT_STATUSES.map(s => (
+                <option key={s} value={s}>{formatStatusLabel(s)}</option>
+              ))}
+            </select>
+          </div>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Project
@@ -369,7 +275,7 @@ export default function Projects() {
                     </DropdownMenu>
                   </div>
                   <Badge variant={getStatusColor(project.status)} className="w-fit capitalize">
-                    {project.status.replace('_', ' ')}
+                    {formatStatusLabel(project.status)}
                   </Badge>
                   {project.priority && (
                     <Badge variant="outline" className="w-fit capitalize ml-2">
@@ -439,13 +345,22 @@ export default function Projects() {
         )}
       </div>
 
-      <AddProjectModal open={showAddModal} onOpenChange={setShowAddModal} onSuccess={() => fetchProjects()} />
+      <AddProjectModal open={showAddModal} onOpenChange={setShowAddModal} onSuccess={() => refresh()} />
       <EditProjectModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
         projectId={selectedProjectId!}
-        onSuccess={() => fetchProjects()}
+        onSuccess={() => refresh()}
       />
+
+      {/* Pagination */}
+      {total > pageSize && (
+        <div className="flex items-center justify-center gap-4 py-6">
+          <Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>Prev</Button>
+          <span className="text-sm">Page {page} of {Math.ceil(total / pageSize)}</span>
+          <Button variant="outline" disabled={page >= Math.ceil(total / pageSize)} onClick={() => setPage(page + 1)}>Next</Button>
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
