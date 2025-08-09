@@ -9,9 +9,11 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AddProjectModal } from "@/components/add-project-modal"
 import { EditProjectModal } from '@/components/edit-project-modal';
 import { createClient } from '@/utils/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the Project type
 interface Project {
@@ -52,6 +54,7 @@ interface Project {
   };
 }
 export default function Projects() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false);
@@ -59,61 +62,61 @@ export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const fetchProjects = async (showLoader: boolean = false) => {
+    try {
+      if (showLoader) setIsLoading(true)
+      setError(null)
+      const supabase = createClient();
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        throw new Error("Authentication required to view projects");
+      }
+
+      const { data, error } = await supabase
+        .from("projects_new")
+        .select(`
+          *,
+          client:clients(first_name, last_name, company_name),
+          project_manager:employees(
+            id,
+            user_id,
+            users (
+              first_name,
+              last_name
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Supabase error:", error);
+        throw new Error(`Failed to fetch projects: ${error.message}`);
+      }
+
+      const validProjects = (data || []).filter(project => {
+        if (!project.name || !project.id) {
+          console.warn("Project missing required fields:", project);
+          return false;
+        }
+        return true;
+      });
+
+      setProjects(validProjects);
+    } catch (err: any) {
+      console.error("Error fetching projects:", err);
+      setError(err.message || "An unknown error occurred");
+    } finally {
+      if (showLoader) setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchProjects() {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const supabase = createClient();
-
-        // First, let's check if the user is authenticated
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-          throw new Error("Authentication required to view projects");
-        }
-
-        const { data, error } = await supabase
-          .from("projects_new")
-          .select(`
-            *,
-            client:clients(first_name, last_name, company_name),
-            project_manager:employees(
-              id,
-              user_id,
-              users (
-                first_name,
-                last_name
-              )
-            )
-          `)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error("Supabase error:", error);
-          throw new Error(`Failed to fetch projects: ${error.message}`);
-        }
-
-        // Filter out any projects with null client data to prevent rendering errors
-        const validProjects = (data || []).filter(project => {
-          // Ensure project has required fields
-          if (!project.name || !project.id) {
-            console.warn("Project missing required fields:", project);
-            return false;
-          }
-          return true;
-        });
-
-        setProjects(validProjects);
-      } catch (err: any) {
-        console.error("Error fetching projects:", err);
-        setError(err.message || "An unknown error occurred");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchProjects();
+    fetchProjects(true);
   }, []);
 
   // Show loading state
@@ -179,6 +182,91 @@ export default function Projects() {
     setSelectedProjectId(projectId);
     setShowEditModal(true);
   };
+
+  const handleArchiveClick = async (projectId: string, projectName: string) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('projects_new')
+        .update({ status: 'cancelled' })
+        .eq('id', projectId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Project Archived',
+        description: `${projectName} has been archived.`,
+      });
+
+      fetchProjects();
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to archive project.',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  // Open the delete confirmation dialog for the selected project
+  const handleDeleteClick = (projectId: string, projectName: string) => {
+    setDeleteTarget({ id: projectId, name: projectName })
+    setDeleteDialogOpen(true)
+  }
+
+  // Permanently delete a project and its dependent data
+  const confirmDeleteProject = async () => {
+    if (!deleteTarget) return
+    try {
+      setIsDeleting(true)
+      const supabase = createClient()
+
+      // 1) Clear FK references from equipment to avoid constraint errors
+      const { error: equipmentError } = await supabase
+        .from('equipment')
+        .update({ current_project_id: null })
+        .eq('current_project_id', deleteTarget.id)
+
+      if (equipmentError) throw equipmentError
+
+      // 2) Delete dependent records that reference the project
+      const childTables = ['tasks', 'documents', 'communications', 'change_orders', 'material_usage']
+      for (const table of childTables) {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq('project_id', deleteTarget.id)
+        if (error) throw error
+      }
+
+      // 3) Delete the project itself
+      const { error: projectDeleteError } = await supabase
+        .from('projects_new')
+        .delete()
+        .eq('id', deleteTarget.id)
+
+      if (projectDeleteError) throw projectDeleteError
+
+      toast({
+        title: 'Project Deleted',
+        description: `${deleteTarget.name} has been permanently deleted.`,
+      })
+
+      setDeleteDialogOpen(false)
+      setDeleteTarget(null)
+      fetchProjects()
+    } catch (err: any) {
+      toast({
+        title: 'Delete Failed',
+        description: err.message || 'Unable to delete project. Ensure you have permission and try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -260,8 +348,8 @@ export default function Projects() {
                       <CardTitle className="text-lg leading-tight">{project.name}</CardTitle>
                       <CardDescription className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        {project.client && project.client.first_name && project.client.last_name ? 
-                          `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}` 
+                        {project.client && project.client.first_name && project.client.last_name ?
+                          `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}`
                           : 'No Client Assigned'}
                       </CardDescription>
                     </div>
@@ -275,7 +363,8 @@ export default function Projects() {
                         <DropdownMenuItem>View Details</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(project.id)}>Edit Project</DropdownMenuItem>
                         <DropdownMenuItem>Add Payment</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">Archive</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleArchiveClick(project.id, project.name)}>Archive</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(project.id, project.name)}>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -350,12 +439,35 @@ export default function Projects() {
         )}
       </div>
 
-      <AddProjectModal open={showAddModal} onOpenChange={setShowAddModal} />
+      <AddProjectModal open={showAddModal} onOpenChange={setShowAddModal} onSuccess={() => fetchProjects()} />
       <EditProjectModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
         projectId={selectedProjectId!}
+        onSuccess={() => fetchProjects()}
       />
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete project permanently?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The project
+              {deleteTarget ? ` "${deleteTarget.name}" ` : ' '}and all of its related data
+              (tasks, documents, communications, change orders, and material usage) will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteProject} disabled={isDeleting}>
+              {isDeleting ? 'Deleting…' : 'Delete Permanently'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

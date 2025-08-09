@@ -29,9 +29,10 @@ interface Client {
 interface AddProjectModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
+export function AddProjectModal({ open, onOpenChange, onSuccess }: AddProjectModalProps) {
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
@@ -41,7 +42,7 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
     startDate: "",
     dueDate: "",
     description: "",
-    status: "Planning",
+    status: "planning",
   })
   const [clients, setClients] = useState<Client[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -98,7 +99,7 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
           start_date: formData.startDate,
           estimated_end_date: formData.dueDate,
           description: formData.description,
-          status: formData.status.toLowerCase().replace(' ', '_'),
+          status: formData.status,
           company_id: companyId, // Include company_id
         },
       ])
@@ -112,6 +113,8 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
         description: `${formData.name} has been added successfully.`,
       })
 
+      onSuccess?.()
+
       // Reset form and close modal
       setFormData({
         name: '',
@@ -121,7 +124,7 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
         startDate: '',
         dueDate: '',
         description: '',
-        status: 'Planning',
+        status: 'planning',
       })
       onOpenChange(false)
     } catch (error: any) {
@@ -199,9 +202,11 @@ export function AddProjectModal({ open, onOpenChange }: AddProjectModalProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Planning">Planning</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="On Hold">On Hold</SelectItem>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

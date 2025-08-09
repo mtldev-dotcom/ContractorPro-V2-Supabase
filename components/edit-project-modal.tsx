@@ -27,6 +27,7 @@ interface EditProjectModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
+  onSuccess?: () => void;
 }
 
 interface Client {
@@ -36,7 +37,7 @@ interface Client {
   company_name: string | null;
 }
 
-export function EditProjectModal({ open, onOpenChange, projectId }: EditProjectModalProps) {
+export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: EditProjectModalProps) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
@@ -46,7 +47,7 @@ export function EditProjectModal({ open, onOpenChange, projectId }: EditProjectM
     startDate: "",
     dueDate: "",
     description: "",
-    status: "Planning",
+    status: "planning",
   });
 
   const [clients, setClients] = useState<Client[]>([]);
@@ -113,7 +114,7 @@ export function EditProjectModal({ open, onOpenChange, projectId }: EditProjectM
           start_date: formData.startDate,
           estimated_end_date: formData.dueDate,
           description: formData.description,
-          status: formData.status.toLowerCase().replace(" ", "_"),
+          status: formData.status,
         })
         .eq("id", projectId);
 
@@ -125,9 +126,10 @@ export function EditProjectModal({ open, onOpenChange, projectId }: EditProjectM
         title: "Project Updated",
         description: `${formData.name} has been updated successfully.`,
       });
-
+      onSuccess?.();
       onOpenChange(false);
     } catch (error: any) {
+      //console.error("Error updating project:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update project.",
@@ -202,9 +204,11 @@ export function EditProjectModal({ open, onOpenChange, projectId }: EditProjectM
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Planning">Planning</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="On Hold">On Hold</SelectItem>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
