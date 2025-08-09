@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,13 +18,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
+import { createClient } from "@/utils/supabase/client"
 
 interface AddClientModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
+export function AddClientModal({ open, onOpenChange, onSuccess }: AddClientModalProps) {
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     type: "individual",
@@ -43,68 +45,40 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
     notes: "",
     rating: "5",
   })
+  const [companyId, setCompanyId] = useState<string | null>(null)
 
-  const states = [
-    "AL",
-    "AK",
-    "AZ",
-    "AR",
-    "CA",
-    "CO",
-    "CT",
-    "DE",
-    "FL",
-    "GA",
-    "HI",
-    "ID",
-    "IL",
-    "IN",
-    "IA",
-    "KS",
-    "KY",
-    "LA",
-    "ME",
-    "MD",
-    "MA",
-    "MI",
-    "MN",
-    "MS",
-    "MO",
-    "MT",
-    "NE",
-    "NV",
-    "NH",
-    "NJ",
-    "NM",
-    "NY",
-    "NC",
-    "ND",
-    "OH",
-    "OK",
-    "OR",
-    "PA",
-    "RI",
-    "SC",
-    "SD",
-    "TN",
-    "TX",
-    "UT",
-    "VT",
-    "VA",
-    "WA",
-    "WV",
-    "WI",
-    "WY",
-  ]
+  useEffect(() => {
+    async function fetchCompanyId() {
+      try {
+        const supabase = createClient()
+        const { data: userData } = await supabase.auth.getUser()
+        const userId = userData.user?.id
+        if (!userId) return
+        const { data, error } = await supabase
+          .from('user_companies')
+          .select('company_id')
+          .eq('user_id', userId)
+          .single()
+        if (!error) {
+          setCompanyId(data?.company_id ?? null)
+        }
+      } catch (_) {
+        // ignore
+      }
+    }
+    fetchCompanyId()
+  }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Removed fixed US states list to support international addresses (e.g., Canadian provinces)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validation
-    if (formData.type === "individual" && (!formData.firstName || !formData.lastName)) {
+    // Validation: first and last name are always required
+    if (!formData.firstName || !formData.lastName) {
       toast({
         title: "Validation Error",
-        description: "First name and last name are required for individual clients.",
+        description: "First name and last name are required.",
         variant: "destructive",
       })
       return
@@ -119,34 +93,73 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
       return
     }
 
-    console.log("New client:", formData)
+    try {
+      const supabase = createClient()
 
-    toast({
-      title: "Client Added",
-      description: `${
-        formData.type === "business" ? formData.companyName : `${formData.firstName} ${formData.lastName}`
-      } has been added successfully.`,
-    })
+      if (!companyId) {
+        throw new Error('Company is required to add a client. Please ensure your account is linked to a company.')
+      }
 
-    // Reset form
-    setFormData({
-      type: "individual",
-      firstName: "",
-      lastName: "",
-      companyName: "",
-      email: "",
-      phone: "",
-      secondaryPhone: "",
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      preferredContactMethod: "email",
-      notes: "",
-      rating: "5",
-    })
-    onOpenChange(false)
+      // Determine optional company name based on type
+      const isBusiness = formData.type === 'business'
+      const companyName = isBusiness ? (formData.companyName || null) : null
+
+      const { error } = await supabase.from('clients').insert([
+        {
+          company_id: companyId,
+          type: formData.type,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          company_name: companyName,
+          email: formData.email || null,
+          phone: formData.phone || null,
+          secondary_phone: formData.secondaryPhone || null,
+          address_line1: formData.addressLine1 || null,
+          address_line2: formData.addressLine2 || null,
+          city: formData.city || null,
+          state: formData.state || null,
+          zip_code: formData.zipCode || null,
+          preferred_contact_method: formData.preferredContactMethod,
+          notes: formData.notes || null,
+          rating: parseInt(formData.rating, 10) || 5,
+        },
+      ])
+
+      if (error) throw error
+
+      toast({
+        title: "Client Added",
+        description: `${isBusiness && companyName ? `${companyName} (` : ''}${formData.firstName} ${formData.lastName}${isBusiness && companyName ? ')' : ''} has been added successfully.`,
+      })
+
+      onSuccess?.()
+
+      // Reset form
+      setFormData({
+        type: "individual",
+        firstName: "",
+        lastName: "",
+        companyName: "",
+        email: "",
+        phone: "",
+        secondaryPhone: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        preferredContactMethod: "email",
+        notes: "",
+        rating: "5",
+      })
+      onOpenChange(false)
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add client.',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (
@@ -177,31 +190,32 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
               </RadioGroup>
             </div>
 
-            {/* Name Fields */}
-            {formData.type === "individual" ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="John"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Smith"
-                    required
-                  />
-                </div>
+            {/* Name Fields - always required */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  placeholder="John"
+                  required
+                />
               </div>
-            ) : (
+              <div className="grid gap-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  placeholder="Smith"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Company Name - required only for business */}
+            {formData.type === 'business' && (
               <div className="grid gap-2">
                 <Label htmlFor="companyName">Company Name *</Label>
                 <Input
@@ -281,22 +295,16 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="state">State</Label>
-                <Select value={formData.state} onValueChange={(value) => setFormData({ ...formData, state: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {states.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="state">State/Province/Region</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  placeholder="CA, QC, ON, or region name"
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="zipCode">ZIP Code</Label>
+                <Label htmlFor="zipCode">ZIP/Postal Code</Label>
                 <Input
                   id="zipCode"
                   value={formData.zipCode}

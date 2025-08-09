@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Plus, Filter, Phone, Mail, MapPin, Star, Building, User } from "lucide-react"
+import { Search, Plus, Filter, Phone, Mail, MapPin, Star, Building, User, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,124 +11,76 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { AddClientModal } from "@/components/add-client-modal"
 import { AddSupplierModal } from "@/components/add-supplier-modal"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useToast } from "@/hooks/use-toast"
+import { useClients } from "@/hooks/use-clients"
+import { CLIENT_TYPES, type ClientType, getClientDisplayName } from "@/lib/clients"
+import { createClient } from "@/utils/supabase/client"
+import { EditClientModal } from "@/components/edit-client-modal"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function Clients() {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddClientModal, setShowAddClientModal] = useState(false)
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false)
+  const [showEditClientModal, setShowEditClientModal] = useState(false)
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
 
-  const clients = [
-    {
-      id: 1,
-      type: "individual",
-      firstName: "Sarah",
-      lastName: "Johnson",
-      companyName: null,
-      email: "sarah.johnson@email.com",
-      phone: "(555) 123-4567",
-      secondaryPhone: null,
-      addressLine1: "123 Maple Street",
-      addressLine2: null,
-      city: "Springfield",
-      state: "IL",
-      zipCode: "62701",
-      preferredContactMethod: "email",
-      notes: "Prefers morning appointments. Has two dogs.",
-      rating: 5,
-      isActive: true,
-      projectsCount: 2,
-      totalSpent: 70000,
-      lastProject: "Kitchen Renovation",
-    },
-    {
-      id: 2,
-      type: "individual",
-      firstName: "Mike",
-      lastName: "Chen",
-      companyName: null,
-      email: "mike.chen@email.com",
-      phone: "(555) 234-5678",
-      secondaryPhone: "(555) 234-5679",
-      addressLine1: "456 Oak Avenue",
-      addressLine2: "Apt 2B",
-      city: "Springfield",
-      state: "IL",
-      zipCode: "62702",
-      preferredContactMethod: "phone",
-      notes: "Works from home, flexible scheduling.",
-      rating: 4,
-      isActive: true,
-      projectsCount: 1,
-      totalSpent: 25000,
-      lastProject: "Bathroom Remodel",
-    },
-    {
-      id: 3,
-      type: "business",
-      firstName: null,
-      lastName: null,
-      companyName: "Rodriguez Property Management",
-      email: "lisa@rodriguezpm.com",
-      phone: "(555) 345-6789",
-      secondaryPhone: null,
-      addressLine1: "789 Pine Street",
-      addressLine2: "Suite 100",
-      city: "Springfield",
-      state: "IL",
-      zipCode: "62703",
-      preferredContactMethod: "email",
-      notes: "Manages multiple rental properties. Bulk discount applied.",
-      rating: 5,
-      isActive: true,
-      projectsCount: 5,
-      totalSpent: 150000,
-      lastProject: "Multi-Unit Renovation",
-    },
-    {
-      id: 4,
-      type: "individual",
-      firstName: "Tom",
-      lastName: "Wilson",
-      companyName: null,
-      email: "tom.wilson@email.com",
-      phone: "(555) 456-7890",
-      secondaryPhone: null,
-      addressLine1: "321 Elm Drive",
-      addressLine2: null,
-      city: "Springfield",
-      state: "IL",
-      zipCode: "62704",
-      preferredContactMethod: "text",
-      notes: "Prefers text communication. Weekend availability.",
-      rating: 4,
-      isActive: true,
-      projectsCount: 1,
-      totalSpent: 15000,
-      lastProject: "Deck Construction",
-    },
-    {
-      id: 5,
-      type: "individual",
-      firstName: "Jennifer",
-      lastName: "Davis",
-      companyName: null,
-      email: "jennifer.davis@email.com",
-      phone: "(555) 567-8901",
-      secondaryPhone: null,
-      addressLine1: "654 Cedar Lane",
-      addressLine2: null,
-      city: "Springfield",
-      state: "IL",
-      zipCode: "62705",
-      preferredContactMethod: "phone",
-      notes: "Emergency contact available 24/7.",
-      rating: 3,
-      isActive: true,
-      projectsCount: 1,
-      totalSpent: 35000,
-      lastProject: "Roof Replacement",
-    },
-  ]
+  const { clients, isLoading, error, total, page, pageSize, setSearch, setType, setIsActive, setPage, refresh } = useClients({
+    pageSize: 12,
+    type: 'all',
+    isActive: 'all',
+  })
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleEditClick = (clientId: string) => {
+    setSelectedClientId(clientId)
+    setShowEditClientModal(true)
+  }
+
+  const handleArchiveClick = async (clientId: string, displayName: string) => {
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('clients').update({ is_active: false }).eq('id', clientId)
+      if (error) throw error
+      toast({ title: 'Client Archived', description: `${displayName} has been archived.` })
+      refresh()
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to archive client.', variant: 'destructive' })
+    }
+  }
+
+  const handleDeletePrompt = (clientId: string, displayName: string) => {
+    setDeleteTarget({ id: clientId, name: displayName })
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteClient = async () => {
+    if (!deleteTarget) return
+    try {
+      setIsDeleting(true)
+      const supabase = createClient()
+      await supabase.from('projects_new').update({ client_id: null }).eq('client_id', deleteTarget.id)
+      await supabase.from('documents').update({ client_id: null }).eq('client_id', deleteTarget.id)
+      await supabase.from('communications').delete().eq('client_id', deleteTarget.id)
+
+      const { error } = await supabase.from('clients').delete().eq('id', deleteTarget.id)
+      if (error) throw error
+      toast({ title: 'Client Deleted', description: `${deleteTarget.name} has been permanently deleted.` })
+      setDeleteDialogOpen(false)
+      setDeleteTarget(null)
+      refresh()
+    } catch (err: any) {
+      toast({ title: 'Delete Failed', description: err.message || 'Unable to delete client.', variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const suppliers = [
     {
@@ -277,14 +229,7 @@ export default function Clients() {
     }
   }
 
-  const filteredClients = clients.filter(
-    (client) =>
-      (client.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.email?.toLowerCase().includes(searchQuery.toLowerCase())) ??
-      false,
-  )
+  const filteredClients = clients
 
   const filteredSuppliers = suppliers.filter(
     (supplier) =>
@@ -306,6 +251,7 @@ export default function Clients() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Clients & Contacts</h1>
+          <p className="text-sm text-muted-foreground">This page has not been touched, dummy data only.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
@@ -313,14 +259,22 @@ export default function Clients() {
             <Input
               placeholder="Search clients & suppliers..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setSearch(e.target.value); setPage(1) }}
               className="pl-10 w-64"
             />
           </div>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            <select className="border rounded px-2 py-1 text-sm bg-background" onChange={(e) => { setType(e.target.value as any); setPage(1) }}>
+              <option value="all">All types</option>
+              {CLIENT_TYPES.map(t => (<option key={t} value={t}>{t}</option>))}
+            </select>
+            <select className="border rounded px-2 py-1 text-sm bg-background" onChange={(e) => { const v = e.target.value; setIsActive(v === 'all' ? 'all' : v === 'true'); setPage(1) }}>
+              <option value="all">All statuses</option>
+              <option value="true">Active</option>
+              <option value="false">Archived</option>
+            </select>
+          </div>
         </div>
       </header>
 
@@ -366,9 +320,7 @@ export default function Clients() {
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">
-                    ${clients.reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString()}
-                  </div>
+                  <div className="text-2xl font-bold">$0</div>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
                 </CardContent>
               </Card>
@@ -376,10 +328,9 @@ export default function Clients() {
 
             {/* Client Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredClients.map((client) => {
-                const ContactMethodIcon = getContactMethodIcon(client.preferredContactMethod)
-                const displayName =
-                  client.type === "business" ? client.companyName : `${client.firstName} ${client.lastName}`
+              {filteredClients.map((client: any) => {
+                const ContactMethodIcon = getContactMethodIcon(client.preferred_contact_method || client.preferredContactMethod)
+                const displayName = client.type === 'business' ? (client.company_name ?? client.companyName) : `${client.first_name ?? client.firstName ?? ''} ${client.last_name ?? client.lastName ?? ''}`.trim()
 
                 return (
                   <Card key={client.id} className="hover:shadow-md transition-shadow">
@@ -407,7 +358,7 @@ export default function Clients() {
                             </CardDescription>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">{renderStars(client.rating)}</div>
+                        <div className="flex items-center gap-1">{renderStars(Number(client.rating ?? 0))}</div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -422,31 +373,22 @@ export default function Clients() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
-                          {client.city}, {client.state} {client.zipCode}
+                          {(client.city)}{client.state ? `, ${client.state}` : ''} {client.zip_code ?? client.zipCode}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <Badge
-                          variant={getContactMethodColor(client.preferredContactMethod)}
+                          variant={getContactMethodColor(client.preferred_contact_method || client.preferredContactMethod)}
                           className="flex items-center gap-1"
                         >
                           <ContactMethodIcon className="h-3 w-3" />
-                          {client.preferredContactMethod}
+                          {client.preferred_contact_method || client.preferredContactMethod}
                         </Badge>
                         <Badge variant="outline">{client.projectsCount} projects</Badge>
                       </div>
 
-                      <div className="space-y-2 pt-2 border-t">
-                        <div className="flex justify-between text-sm">
-                          <span>Total Spent</span>
-                          <span className="font-medium">${client.totalSpent.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>Last Project</span>
-                          <span>{client.lastProject}</span>
-                        </div>
-                      </div>
+                      {/* Aggregate values can be added via server joins later */}
 
                       {client.notes && (
                         <div className="text-sm text-muted-foreground bg-muted p-2 rounded">{client.notes}</div>
@@ -456,7 +398,7 @@ export default function Clients() {
                         <Button size="sm" className="flex-1">
                           View Details
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEditClick(client.id)}>
                           Edit
                         </Button>
                       </div>
@@ -581,8 +523,28 @@ export default function Clients() {
         </Tabs>
       </div>
 
-      <AddClientModal open={showAddClientModal} onOpenChange={setShowAddClientModal} />
+      <AddClientModal open={showAddClientModal} onOpenChange={setShowAddClientModal} onSuccess={() => refresh()} />
       <AddSupplierModal open={showAddSupplierModal} onOpenChange={setShowAddSupplierModal} />
+      {selectedClientId && (
+        <EditClientModal open={showEditClientModal} onOpenChange={setShowEditClientModal} clientId={selectedClientId} onSuccess={() => refresh()} />
+      )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete client permanently?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The client
+              {deleteTarget ? ` "${deleteTarget.name}" ` : ' '}and its related communications will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteClient} disabled={isDeleting}>{isDeleting ? 'Deleting…' : 'Delete Permanently'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
