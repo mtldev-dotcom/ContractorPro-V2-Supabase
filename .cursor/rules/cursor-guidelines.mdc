@@ -1,0 +1,102 @@
+# Cursor Rules for ContractorPro‑V2‑Supabase
+#
+# These rules provide high‑level guidance to Cursor AI on how to work within
+# this Next.js/Supabase project.  They apply to all files in the repository.
+# See the project report for further context.
+
+rule_type: always
+message: |
+  ## Overview
+  The project is a **Next.js 13+** application using the *app router*, written in **TypeScript**
+  with **Tailwind CSS** for styling and **Supabase** as the backend for
+  authentication and data storage.  Data is fetched using Supabase clients
+  (`createBrowserClient` in client components and `createServerClient` in server
+  components) and displayed via React components.  Most UI components live in
+  `components/ui/` and pages live under `app/`.
+
+  ## Essential Guidelines
+  - **Use server components for data‑fetching whenever possible.**  Only mark
+    files as `"use client"` when interactivity is required.  For example,
+    `app/dashboard/projects/page.tsx` is a client component because it handles
+    search input and modals.
+  - **Instantiate Supabase clients appropriately.**  Use
+    `createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)` in server contexts (middleware, server actions) and
+    `createBrowserClient` in client components.
+  - **Handle errors and loading states.**  Wrap asynchronous calls in
+    `try/catch` and display loading indicators when `isLoading` is true.  Use
+    toast notifications for success or error messages, but avoid exposing raw
+    database errors to users.
+  - **Validate user input.**  Use a form library like `react-hook-form` with
+    `zod` schemas to validate numeric fields, dates and required inputs.  Do
+    not parse floats directly from unvalidated strings.
+  - **Sanitise search queries.**  Avoid constructing filter strings via
+    interpolation (e.g. `query.or(\`name.ilike.%${search}%,project_number.ilike.%${search}%\`)`).  Instead, use `.or()` with fixed patterns or use `ilike()` calls
+    and escape special characters.
+  - **Perform destructive actions on the server.**  Deletions and cascades
+    should be encapsulated in Supabase stored procedures or Postgres functions
+    to ensure atomicity.  Do not loop through tables in client code to delete
+    related records.
+  - **Respect Row Level Security (RLS).**  Always design queries and updates
+    assuming RLS policies are in place.  Never assume the client can bypass
+    permissions.
+  - **Use consistent naming.**  Use PascalCase for React components and
+    camelCase for functions/hooks.  Group related components in folders (e.g.
+    `components/projects/`).
+  - **Avoid deprecated patterns.**  Do not call `window.location.reload()` to
+    recover from errors; instead, reset component state or re‑fetch data.
+    Avoid using plain CSS; prefer Tailwind classes or UI components.
+
+  ## Example Patterns
+  ### Fetching projects with a hook
+  ```ts
+  // hooks/useProjects.ts
+  export function useProjects({ search = '', status = 'all', page = 1, pageSize = 12 }) {
+    const supabase = createClient();
+    // Debounce search input and build query safely
+    // ...
+  }
+  ```
+
+  ### Displaying a list of projects
+  ```tsx
+  // app/dashboard/projects/page.tsx
+  import { useProjects } from '@/hooks/use-projects';
+
+  export default function Projects() {
+    const { projects, isLoading, error, setSearch } = useProjects({ pageSize: 12 });
+    // Show loading or error states
+    if (isLoading) return <LoadingSpinner />;
+    if (error) return <ErrorPage message={error} />;
+
+    return (
+      <div>
+        <SearchBar onChange={v => setSearch(v)} />
+        <ProjectGrid projects={projects} />
+      </div>
+    );
+  }
+  ```
+
+  ### Validating form input
+  ```tsx
+  // Example using react-hook-form and zod
+  const schema = z.object({
+    name: z.string().min(1),
+    budget: z.number().min(0),
+    startDate: z.string(),
+    dueDate: z.string(),
+  });
+  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
+  ```
+
+  ## Verification
+  When writing new code in this project, ensure that:
+  1. Supabase operations are encapsulated in hooks or server actions and errors are
+     handled gracefully.
+  2. Inputs are validated and sanitized; user input never directly forms SQL or
+     PostgREST filter strings.
+  3. Sensitive keys or service secrets are never exposed to the client.
+  4. The code follows the existing folder and naming conventions and uses
+     Tailwind classes and UI components from `@/components/ui` for styling.
+  5. Tests or at least manual checks confirm that deletion or update operations
+     respect RLS and cannot be executed by unauthorized users.
