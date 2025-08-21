@@ -18,28 +18,28 @@ export default function Dashboard() {
   
   const metrics = [
     {
-      title: "Monthly Revenue",
+      title: t("monthlyRevenue"),
       value: "$127,500",
       change: "+12.5%",
       trend: "up",
       icon: DollarSign,
     },
     {
-      title: "Active Projects",
+      title: t("activeProjects"),
       value: "8",
       change: "+2",
       trend: "up",
       icon: Building2,
     },
     {
-      title: "Team Members",
+      title: t("teamMembers"),
       value: "24",
       change: "+3",
       trend: "up",
       icon: Users,
     },
     {
-      title: "Weekly Payroll",
+      title: t("weeklyPayroll"),
       value: "$18,750",
       change: "-5.2%",
       trend: "down",
@@ -129,7 +129,7 @@ export default function Dashboard() {
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search projects, clients..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 w-64"
@@ -140,7 +140,7 @@ export default function Dashboard() {
           </Button>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            New Project
+            {t("newProject")}
           </Button>
         </div>
       </header>
@@ -163,7 +163,7 @@ export default function Dashboard() {
                     <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
                   )}
                   <span className={metric.trend === "up" ? "text-green-500" : "text-red-500"}>{metric.change}</span>
-                  <span className="ml-1">from last month</span>
+                  <span className="ml-1">{t("fromLastMonth")}</span>
                 </div>
               </CardContent>
             </Card>
@@ -174,8 +174,8 @@ export default function Dashboard() {
           {/* Active Projects */}
           <Card>
             <CardHeader>
-              <CardTitle>Active Projects</CardTitle>
-              <CardDescription>Current project status and progress</CardDescription>
+              <CardTitle>{t("activeProjectsTitle")}</CardTitle>
+              <CardDescription>{t("activeProjectsDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {activeProjects.map((project) => (
@@ -196,12 +196,12 @@ export default function Dashboard() {
                               : "secondary"
                       }
                     >
-                      {project.status}
+                      {t(`projectStatus.${project.status.toLowerCase().replace(/\s+/g, '')}`)}
                     </Badge>
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span>Progress: {project.progress}%</span>
+                      <span>{t("progress")}: {project.progress}%</span>
                       <span>
                         ${project.spent.toLocaleString()} / ${project.budget.toLocaleString()}
                       </span>
@@ -216,8 +216,8 @@ export default function Dashboard() {
           {/* Recent Transactions */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Transactions</CardTitle>
-              <CardDescription>Latest financial activity</CardDescription>
+              <CardTitle>{t("recentTransactions")}</CardTitle>
+              <CardDescription>{t("latestFinancialActivity")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {recentTransactions.map((transaction) => (
@@ -239,19 +239,19 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">This Month</CardTitle>
+              <CardTitle className="text-base">{t("thisMonth")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Revenue</span>
+                <span className="text-sm text-muted-foreground">{t("revenue")}</span>
                 <span className="font-medium text-green-600">+$127,500</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Expenses</span>
+                <span className="text-sm text-muted-foreground">{t("expenses")}</span>
                 <span className="font-medium text-red-600">-$89,200</span>
               </div>
               <div className="flex justify-between border-t pt-2">
-                <span className="font-medium">Net Profit</span>
+                <span className="font-medium">{t("netProfit")}</span>
                 <span className="font-bold text-green-600">$38,300</span>
               </div>
             </CardContent>
@@ -259,19 +259,19 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Team Status</CardTitle>
+              <CardTitle className="text-base">{t("teamStatus")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">On Site</span>
+                <span className="text-sm text-muted-foreground">{t("onSite")}</span>
                 <span className="font-medium">18</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Available</span>
+                <span className="text-sm text-muted-foreground">{t("available")}</span>
                 <span className="font-medium">4</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Off Today</span>
+                <span className="text-sm text-muted-foreground">{t("offToday")}</span>
                 <span className="font-medium">2</span>
               </div>
             </CardContent>
@@ -279,19 +279,19 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Upcoming</CardTitle>
+              <CardTitle className="text-base">{t("upcoming")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Due This Week</span>
-                <span className="font-medium">3 Projects</span>
+                <span className="text-sm text-muted-foreground">{t("dueThisWeek")}</span>
+                <span className="font-medium">{t("projectsCount", {count: 3})}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Inspections</span>
-                <span className="font-medium">2 Scheduled</span>
+                <span className="text-sm text-muted-foreground">{t("inspections")}</span>
+                <span className="font-medium">{t("scheduled", {count: 2})}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Payments Due</span>
+                <span className="text-sm text-muted-foreground">{t("paymentsDue")}</span>
                 <span className="font-medium">$45,000</span>
               </div>
             </CardContent>
