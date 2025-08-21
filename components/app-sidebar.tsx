@@ -16,10 +16,9 @@ import {
   LogOut,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { useTranslations } from 'next-intl'
+import { Link, usePathname, useRouter } from '@/i18n/navigation'
 
 import {
   Sidebar,
@@ -36,7 +35,7 @@ import {
 } from "@/components/ui/sidebar"
 
 const getMenuItems = (t: any) => [
-  { title: t("dashboard"), url: "/dashboard/", icon: Home, key: "dashboard" },
+  { title: t("dashboard"), url: "/dashboard", icon: Home, key: "dashboard" },
   { title: t("projects"), url: "/dashboard/projects", icon: Building2, key: "projects" },
   { title: t("clients"), url: "/dashboard/clients", icon: Users, key: "clients" },
   { title: t("invoices"), url: "/dashboard/invoices", icon: FileText, key: "invoices" },
