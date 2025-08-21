@@ -1,0 +1,17 @@
+{
+  "general": {
+    "name": "ContractorPro",
+    "description": "Gestion complète des projets et des entreprises pour les entrepreneurs généraux"
+  },
+  "nav": {
+    "home": "Accueil",
+    "dashboard": "Tableau de bord",
+    "projects": "Projets",
+    "clients": "Clients",
+    "invoices": "Factures"
+  },
+  "Dashboard": {
+    "title": "Tableau de bord",
+    "description": "Vue d'ensemble des performances de l'entreprise"
+  }
+}

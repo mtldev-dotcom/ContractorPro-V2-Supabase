@@ -1,0 +1,17 @@
+{  
+  "general":{
+    "name": "ContractorPro",
+    "description": "Comprehensive project and business management for general contractors"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "clients": "Clients",
+    "invoices": "Invoices"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "description": "Overview of business performance"
+  }
+}

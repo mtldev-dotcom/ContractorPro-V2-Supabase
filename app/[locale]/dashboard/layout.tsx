@@ -4,11 +4,15 @@ import React from 'react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { useOnboarding } from '@/hooks/use-onboarding'
 import { Loader2 } from 'lucide-react'
+import {useTranslations} from 'next-intl';
+import {Link} from '@/i18n/navigation';
 
 export default function DashboardLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: { locale: string }
 }) {
   const { isCompleted, isLoading, error } = useOnboarding()
 
