@@ -16,9 +16,11 @@ import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getStatusBadgeVariant, formatStatusLabel, PROJECT_STATUSES, type Project, type ProjectStatus } from '@/lib/projects'
 import { useProjects } from '@/hooks/use-projects'
+import { useTranslations } from 'next-intl'
 
 export default function Projects() {
   const { toast } = useToast();
+  const t = useTranslations("projects");
   // Search, status filter, pagination are managed by useProjects
   const { projects, isLoading, error, total, page, pageSize, setSearch, setStatus, setPage, refresh } = useProjects({
     pageSize: 12,
@@ -44,7 +46,7 @@ export default function Projects() {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center p-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading Projects...</h2>
+          <h2 className="text-2xl font-bold mb-4">{t("loading")}</h2>
           <Progress className="w-64 h-2" />
         </div>
       </div>
@@ -56,13 +58,13 @@ export default function Projects() {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">Error Loading Projects</h2>
+          <h2 className="text-2xl font-bold mb-4 text-red-600">{t("errorLoading")}</h2>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button
             onClick={() => window.location.reload()}
             variant="outline"
           >
-            Try Again
+            {t("tryAgain")}
           </Button>
         </div>
       </div>
@@ -92,15 +94,15 @@ export default function Projects() {
       }
 
       toast({
-        title: 'Project Archived',
-        description: `${projectName} has been archived.`,
+        title: t('projectArchived'),
+        description: t('projectArchivedDesc', { projectName }),
       });
 
       refresh();
     } catch (err: any) {
       toast({
-        title: 'Error',
-        description: err.message || 'Failed to archive project.',
+        title: t('error'),
+        description: err.message || t('failedToArchive'),
         variant: 'destructive',
       });
     }
@@ -146,8 +148,8 @@ export default function Projects() {
       if (projectDeleteError) throw projectDeleteError
 
       toast({
-        title: 'Project Deleted',
-        description: `${deleteTarget.name} has been permanently deleted.`,
+        title: t('projectDeleted'),
+        description: t('projectDeletedDesc', { projectName: deleteTarget.name }),
       })
 
       setDeleteDialogOpen(false)
@@ -155,8 +157,8 @@ export default function Projects() {
       refresh()
     } catch (err: any) {
       toast({
-        title: 'Delete Failed',
-        description: err.message || 'Unable to delete project. Ensure you have permission and try again.',
+        title: t('deleteFailed'),
+        description: err.message || t('deleteFailedDesc'),
         variant: 'destructive',
       })
     } finally {
@@ -170,13 +172,13 @@ export default function Projects() {
       <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          <h1 className="text-2xl font-bold">Projects</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search projects..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 w-64"
@@ -190,7 +192,7 @@ export default function Projects() {
               value={statusFilter}
               onChange={(e) => { const v = e.target.value as ProjectStatus | 'all'; setStatusFilter(v); setStatus(v); setPage(1); }}
             >
-              <option value="all">All statuses</option>
+              <option value="all">{t("allStatuses")}</option>
               {PROJECT_STATUSES.map(s => (
                 <option key={s} value={s}>{formatStatusLabel(s)}</option>
               ))}
@@ -198,7 +200,7 @@ export default function Projects() {
           </div>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Project
+            {t("newProject")}
           </Button>
         </div>
       </header>
@@ -209,25 +211,25 @@ export default function Projects() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">8</div>
-              <p className="text-sm text-muted-foreground">Active Projects</p>
+              <p className="text-sm text-muted-foreground">{t("activeProjects")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">$233K</div>
-              <p className="text-sm text-muted-foreground">Total Budget</p>
+              <p className="text-sm text-muted-foreground">{t("totalBudget")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">$107K</div>
-              <p className="text-sm text-muted-foreground">Total Spent</p>
+              <p className="text-sm text-muted-foreground">{t("totalSpent")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">54%</div>
-              <p className="text-sm text-muted-foreground">Avg Progress</p>
+              <p className="text-sm text-muted-foreground">{t("avgProgress")}</p>
             </CardContent>
           </Card>
         </div>
@@ -235,13 +237,13 @@ export default function Projects() {
         {/* Projects Grid */}
         {filteredProjects.length === 0 ? (
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">No Projects Found</h3>
+            <h3 className="text-lg font-semibold mb-2">{t("noProjectsFound")}</h3>
             <p className="text-muted-foreground mb-4">
-              {searchQuery ? 'No projects match your search criteria.' : 'No projects have been created yet.'}
+              {searchQuery ? t("noMatchingProjects") : t("noProjectsCreated")}
             </p>
             <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Your First Project
+              {t("createFirstProject")}
             </Button>
           </div>
         ) : (
@@ -256,7 +258,7 @@ export default function Projects() {
                         <User className="h-3 w-3" />
                         {project.client && project.client.first_name && project.client.last_name ?
                           `${project.client.first_name} ${project.client.last_name}${project.client.company_name ? ` (${project.client.company_name})` : ''}`
-                          : 'No Client Assigned'}
+                          : t("noClientAssigned")}
                       </CardDescription>
                     </div>
                     <DropdownMenu>
@@ -266,11 +268,11 @@ export default function Projects() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditClick(project.id)}>Edit Project</DropdownMenuItem>
-                        <DropdownMenuItem>Add Payment</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleArchiveClick(project.id, project.name)}>Archive</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(project.id, project.name)}>Delete</DropdownMenuItem>
+                        <DropdownMenuItem>{t("viewDetails")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(project.id)}>{t("editProject")}</DropdownMenuItem>
+                        <DropdownMenuItem>{t("addPayment")}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleArchiveClick(project.id, project.name)}>{t("archive")}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(project.id, project.name)}>{t("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -293,7 +295,7 @@ export default function Projects() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      Due: {project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : 'Not set'}
+                      {t("due")}: {project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : t("notSet")}
                     </div>
                   </div>
 
@@ -301,22 +303,22 @@ export default function Projects() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <User className="h-3 w-3" />
-                        Project Manager: {project.project_manager.users.first_name} {project.project_manager.users.last_name}
+                        {t("projectManager")}: {project.project_manager.users.first_name} {project.project_manager.users.last_name}
                       </div>
                     </div>
                   )}
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Budget</span>
+                      <span>{t("budget")}</span>
                       <span className="font-medium">${(project.budget || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Contract Amount</span>
+                      <span>{t("contractAmount")}</span>
                       <span className="font-medium">${(project.contract_amount || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm font-medium border-t pt-2">
-                      <span>Difference</span>
+                      <span>{t("difference")}</span>
                       <span className={project.contract_amount >= project.budget ? "text-green-600" : "text-red-600"}>
                         ${(project.contract_amount - project.budget).toLocaleString()}
                       </span>
@@ -327,7 +329,7 @@ export default function Projects() {
 
                   <div className="flex gap-2 pt-2">
                     <Button size="sm" className="flex-1">
-                      View Details
+                      {t("viewDetails")}
                     </Button>
                     <Button
                       size="sm"
@@ -335,7 +337,7 @@ export default function Projects() {
                       className="flex-1"
                       onClick={() => handleEditClick(project.id)}
                     >
-                      Edit
+                      {t("edit")}
                     </Button>
                   </div>
                 </CardContent>
@@ -356,9 +358,9 @@ export default function Projects() {
       {/* Pagination */}
       {total > pageSize && (
         <div className="flex items-center justify-center gap-4 py-6">
-          <Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>Prev</Button>
-          <span className="text-sm">Page {page} of {Math.ceil(total / pageSize)}</span>
-          <Button variant="outline" disabled={page >= Math.ceil(total / pageSize)} onClick={() => setPage(page + 1)}>Next</Button>
+          <Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>{t("prev")}</Button>
+          <span className="text-sm">{t("page")} {page} {t("of")} {Math.ceil(total / pageSize)}</span>
+          <Button variant="outline" disabled={page >= Math.ceil(total / pageSize)} onClick={() => setPage(page + 1)}>{t("next")}</Button>
         </div>
       )}
 
@@ -366,19 +368,17 @@ export default function Projects() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete project permanently?</DialogTitle>
+            <DialogTitle>{t("deleteProjectPermanently")}</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. The project
-              {deleteTarget ? ` "${deleteTarget.name}" ` : ' '}and all of its related data
-              (tasks, documents, communications, change orders, and material usage) will be permanently removed.
+              {t("deleteProjectWarning", { projectName: deleteTarget?.name || '' })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button variant="destructive" onClick={confirmDeleteProject} disabled={isDeleting}>
-              {isDeleting ? 'Deleting…' : 'Delete Permanently'}
+              {isDeleting ? t("deleting") : t("deletePermanently")}
             </Button>
           </DialogFooter>
         </DialogContent>

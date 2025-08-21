@@ -7,6 +7,7 @@ export default async function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <form className="space-y-4 bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold">Sign In or Sign Up</h2>
+        <p className="text-sm text-gray-600">copy master branch.</p>
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium">Email</label>
           <input id="email" name="email" type="email" required className="w-full border rounded px-3 py-2"/>

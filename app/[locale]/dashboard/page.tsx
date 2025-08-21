@@ -9,9 +9,13 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
+import {useTranslations} from 'next-intl';
+
 export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("")
 
+  const t = useTranslations("Dashboard");
+  
   const metrics = [
     {
       title: "Monthly Revenue",
@@ -119,7 +123,7 @@ export default function Dashboard() {
       <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
