@@ -13,5 +13,23 @@
   "Dashboard": {
     "title": "Dashboard",
     "description": "Overview of business performance"
+  },
+  "sidebar": {
+    "welcome": "Welcome",
+    "navigation": "Navigation",
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "clients": "Clients",
+    "invoices": "Invoices",
+    "finances": "Finances",
+    "employees": "Employees",
+    "timeTracking": "Time Tracking",
+    "tasks": "Tasks",
+    "equipment": "Equipment",
+    "materials": "Materials",
+    "documents": "Documents",
+    "reports": "Reports",
+    "settings": "Settings",
+    "signOut": "Sign Out"
   }
 }

@@ -13,5 +13,23 @@
   "Dashboard": {
     "title": "Tableau de bord",
     "description": "Vue d'ensemble des performances de l'entreprise"
+  },
+  "sidebar": {
+    "welcome": "Bienvenue",
+    "navigation": "Navigation",
+    "dashboard": "Tableau de bord",
+    "projects": "Projets",
+    "clients": "Clients",
+    "invoices": "Factures",
+    "finances": "Finances",
+    "employees": "Employés",
+    "timeTracking": "Suivi du temps",
+    "tasks": "Tâches",
+    "equipment": "Équipement",
+    "materials": "Matériaux",
+    "documents": "Documents",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "signOut": "Se déconnecter"
   }
 }

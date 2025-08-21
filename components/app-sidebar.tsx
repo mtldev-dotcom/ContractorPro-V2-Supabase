@@ -19,6 +19,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
+import { useTranslations } from 'next-intl'
 
 import {
   Sidebar,
@@ -34,20 +35,20 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar"
 
-const menuItems = [
-  { title: "Dashboard", url: "/dashboard/", icon: Home },
-  { title: "Projects", url: "/dashboard/projects", icon: Building2 },
-  { title: "Clients", url: "/dashboard/clients", icon: Users },
-  { title: "Invoices", url: "/dashboard/invoices", icon: FileText },
-  { title: "Finances", url: "/dashboard/finances", icon: DollarSign },
-  { title: "Employees", url: "/dashboard/employees", icon: Users },
-  { title: "Time Tracking", url: "/dashboard/time-tracking", icon: Clock },
-  { title: "Tasks", url: "/dashboard/tasks", icon: CheckSquare },
-  { title: "Equipment", url: "/dashboard/equipment", icon: Wrench },
-  { title: "Materials", url: "/dashboard/materials", icon: Package },
-  { title: "Documents", url: "/dashboard/documents", icon: FolderOpen },
-  { title: "Reports", url: "/dashboard/reports", icon: Calculator },
-  { title: "Settings", url: "/dashboard/settings", icon: Settings },
+const getMenuItems = (t: any) => [
+  { title: t("dashboard"), url: "/dashboard/", icon: Home, key: "dashboard" },
+  { title: t("projects"), url: "/dashboard/projects", icon: Building2, key: "projects" },
+  { title: t("clients"), url: "/dashboard/clients", icon: Users, key: "clients" },
+  { title: t("invoices"), url: "/dashboard/invoices", icon: FileText, key: "invoices" },
+  { title: t("finances"), url: "/dashboard/finances", icon: DollarSign, key: "finances" },
+  { title: t("employees"), url: "/dashboard/employees", icon: Users, key: "employees" },
+  { title: t("timeTracking"), url: "/dashboard/time-tracking", icon: Clock, key: "timeTracking" },
+  { title: t("tasks"), url: "/dashboard/tasks", icon: CheckSquare, key: "tasks" },
+  { title: t("equipment"), url: "/dashboard/equipment", icon: Wrench, key: "equipment" },
+  { title: t("materials"), url: "/dashboard/materials", icon: Package, key: "materials" },
+  { title: t("documents"), url: "/dashboard/documents", icon: FolderOpen, key: "documents" },
+  { title: t("reports"), url: "/dashboard/reports", icon: Calculator, key: "reports" },
+  { title: t("settings"), url: "/dashboard/settings", icon: Settings, key: "settings" },
 ]
 
 type Company = {
@@ -60,6 +61,8 @@ export function AppSidebar() {
   const router = useRouter()
   const [companies, setCompanies] = useState<Company[]>([])
   const [userName, setUserName] = useState<string>("")
+  const t = useTranslations("sidebar")
+  const menuItems = getMenuItems(t)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -110,7 +113,7 @@ export function AppSidebar() {
         <div className="flex flex-col gap-2 px-4 py-2">
           <div className="flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">{userName || "Welcome"}</span>
+            <span className="font-bold text-lg">{userName || t("welcome")}</span>
           </div>
           {companies.length > 0 && (
             <select className="w-full rounded-md text-sm border border-input bg-background px-3 py-1">
@@ -125,11 +128,11 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("navigation")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
@@ -148,7 +151,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
+              <span>{t("signOut")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
