@@ -42,7 +42,7 @@ export default async function RootLayout({
             <main className="flex-1 overflow-hidden">{children}</main>
           </div>
           <Toaster />
-          <DevModeToast />
+          {/* <DevModeToast /> */}
         </SidebarProvider>
         </NextIntlClientProvider>
       </body>

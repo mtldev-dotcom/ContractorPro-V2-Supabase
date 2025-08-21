@@ -64,13 +64,15 @@ export default function Clients() {
     if (!deleteTarget) return
     try {
       setIsDeleting(true)
-      const supabase = createClient()
-      await supabase.from('projects_new').update({ client_id: null }).eq('client_id', deleteTarget.id)
-      await supabase.from('documents').update({ client_id: null }).eq('client_id', deleteTarget.id)
-      await supabase.from('communications').delete().eq('client_id', deleteTarget.id)
-
-      const { error } = await supabase.from('clients').delete().eq('id', deleteTarget.id)
-      if (error) throw error
+      const res = await fetch('/api/clients/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: deleteTarget.id }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        throw new Error(data?.error || 'Failed to delete client')
+      }
       toast({ title: 'Client Deleted', description: `${deleteTarget.name} has been permanently deleted.` })
       setDeleteDialogOpen(false)
       setDeleteTarget(null)

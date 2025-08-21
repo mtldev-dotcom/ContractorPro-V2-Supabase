@@ -83,28 +83,29 @@ export default function Projects() {
 
   const handleArchiveClick = async (projectId: string, projectName: string) => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('projects_new')
-        .update({ status: 'cancelled' })
-        .eq('id', projectId);
-
-      if (error) {
-        throw error;
+      const base = typeof window !== 'undefined' ? window.location.origin : ''
+      const res = await fetch(`${base}/api/projects/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        throw new Error(data?.error || 'Failed to archive project')
       }
 
       toast({
         title: t('projectArchived'),
         description: t('projectArchivedDesc', { projectName }),
-      });
+      })
 
-      refresh();
+      refresh()
     } catch (err: any) {
       toast({
         title: t('error'),
         description: err.message || t('failedToArchive'),
         variant: 'destructive',
-      });
+      })
     }
   }
 
@@ -119,33 +120,16 @@ export default function Projects() {
     if (!deleteTarget) return
     try {
       setIsDeleting(true)
-      const supabase = createClient()
-
-      // 1) Clear FK references from equipment to avoid constraint errors
-      const { error: equipmentError } = await supabase
-        .from('equipment')
-        .update({ current_project_id: null })
-        .eq('current_project_id', deleteTarget.id)
-
-      if (equipmentError) throw equipmentError
-
-      // 2) Delete dependent records that reference the project
-      const childTables = ['tasks', 'documents', 'communications', 'change_orders', 'material_usage']
-      for (const table of childTables) {
-        const { error } = await supabase
-          .from(table)
-          .delete()
-          .eq('project_id', deleteTarget.id)
-        if (error) throw error
+      const base = typeof window !== 'undefined' ? window.location.origin : ''
+      const res = await fetch(`${base}/api/projects/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: deleteTarget.id }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        throw new Error(data?.error || 'Failed to delete project')
       }
-
-      // 3) Delete the project itself
-      const { error: projectDeleteError } = await supabase
-        .from('projects_new')
-        .delete()
-        .eq('id', deleteTarget.id)
-
-      if (projectDeleteError) throw projectDeleteError
 
       toast({
         title: t('projectDeleted'),
@@ -271,7 +255,7 @@ export default function Projects() {
                         <DropdownMenuItem>{t("viewDetails")}</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(project.id)}>{t("editProject")}</DropdownMenuItem>
                         <DropdownMenuItem>{t("addPayment")}</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600" onClick={() => handleArchiveClick(project.id, project.name)}>{t("archive")}</DropdownMenuItem>
+                        {/* <DropdownMenuItem className="text-red-600" onClick={() => handleArchiveClick(project.id, project.name)}>{t("archive")}</DropdownMenuItem> */}
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(project.id, project.name)}>{t("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
