@@ -109,6 +109,8 @@
     "projectDeleted": "Project Deleted",
     "projectDeletedDesc": "{projectName} has been permanently deleted.",
     "deleteFailed": "Delete Failed",
-    "deleteFailedDesc": "Unable to delete project. Ensure you have permission and try again."
+    "deleteFailedDesc": "Unable to delete project. Ensure you have permission and try again.",
+    "priority": "Priority",
+    "status": "Status"
   }
 }

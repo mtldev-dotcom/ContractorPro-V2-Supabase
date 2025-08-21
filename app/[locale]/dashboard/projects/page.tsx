@@ -277,11 +277,11 @@ export default function Projects() {
                     </DropdownMenu>
                   </div>
                   <Badge variant={getStatusColor(project.status)} className="w-fit capitalize">
-                    {formatStatusLabel(project.status)}
+                    {t("status")}: {formatStatusLabel(project.status)}
                   </Badge>
                   {project.priority && (
                     <Badge variant="outline" className="w-fit capitalize ml-2">
-                      {project.priority}
+                      {t("priority")}: {project.priority}
                     </Badge>
                   )}
                 </CardHeader>

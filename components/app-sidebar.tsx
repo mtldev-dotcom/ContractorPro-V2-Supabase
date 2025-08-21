@@ -14,10 +14,11 @@ import {
   Clock,
   FolderOpen,
   LogOut,
+  Globe,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase/client"
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Link, usePathname, useRouter } from '@/i18n/navigation'
 
 import {
@@ -61,6 +62,7 @@ export function AppSidebar() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [userName, setUserName] = useState<string>("")
   const t = useTranslations("sidebar")
+  const locale = useLocale()
   const menuItems = getMenuItems(t)
 
   useEffect(() => {
@@ -147,6 +149,36 @@ export function AppSidebar() {
       <SidebarSeparator />
       <SidebarFooter className="mt-auto">
         <SidebarMenu>
+          {/* Language Switcher */}
+          <SidebarMenuItem>
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <div className="flex gap-1">
+                <Link 
+                  href={pathname}
+                  locale="en"
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    locale === 'en' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  EN
+                </Link>
+                <Link 
+                  href={pathname}
+                  locale="fr"
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    locale === 'fr' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  FR
+                </Link>
+              </div>
+            </div>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />

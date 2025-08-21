@@ -109,6 +109,8 @@
     "projectDeleted": "Projet supprimé",
     "projectDeletedDesc": "{projectName} a été supprimé définitivement.",
     "deleteFailed": "Suppression échouée",
-    "deleteFailedDesc": "Impossible de supprimer le projet. Assurez-vous d'avoir les permissions nécessaires et réessayez."
+    "deleteFailedDesc": "Impossible de supprimer le projet. Assurez-vous d'avoir les permissions nécessaires et réessayez.",
+    "priority": "Priorité",
+    "status": "Statut"
   }
 }
