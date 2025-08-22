@@ -8,111 +8,60 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Progress } from "@/components/ui/progress"
 import { AddTransactionModal } from "@/components/add-transaction-modal"
+import { useTransactions } from "@/hooks/use-transactions"
 
 export default function Finances() {
+  const {
+    transactions,
+    isLoading,
+    error,
+    monthlyStats,
+    categories,
+    setSearch,
+    refresh
+  } = useTransactions({ pageSize: 50 })
+  
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
 
-  const transactions = [
-    {
-      id: 1,
-      date: "2024-02-15",
-      description: "Kitchen Renovation - Progress Payment",
-      project: "Maple Street Kitchen",
-      category: "Project Payment",
-      amount: 15000,
-      type: "income",
-    },
-    {
-      id: 2,
-      description: "Lumber Supply - Home Depot",
-      project: "Oak Avenue Bathroom",
-      category: "Materials",
-      amount: -2500,
-      type: "expense",
-      date: "2024-02-14",
-    },
-    {
-      id: 3,
-      description: "Electrical Work - Johnson Electric",
-      project: "Pine Street Addition",
-      category: "Subcontractor",
-      amount: -3200,
-      type: "expense",
-      date: "2024-02-13",
-    },
-    {
-      id: 4,
-      description: "Bathroom Remodel - Final Payment",
-      project: "Oak Avenue Bathroom",
-      category: "Project Payment",
-      amount: 8500,
-      type: "income",
-      date: "2024-02-12",
-    },
-    {
-      id: 5,
-      description: "Tool Rental - United Rentals",
-      project: "Pine Street Addition",
-      category: "Equipment",
-      amount: -450,
-      type: "expense",
-      date: "2024-02-11",
-    },
-    {
-      id: 6,
-      description: "Plumbing Supplies - Ferguson",
-      project: "Maple Street Kitchen",
-      category: "Materials",
-      amount: -1200,
-      type: "expense",
-      date: "2024-02-10",
-    },
-    {
-      id: 7,
-      description: "Deck Construction - Initial Payment",
-      project: "Elm Drive Deck",
-      category: "Project Payment",
-      amount: 5000,
-      type: "income",
-      date: "2024-02-09",
-    },
-    {
-      id: 8,
-      description: "Insurance Premium - General Liability",
-      project: "General",
-      category: "Insurance",
-      amount: -850,
-      type: "expense",
-      date: "2024-02-08",
-    },
-  ]
-
-  const monthlyStats = {
-    totalIncome: 28500,
-    totalExpenses: 8200,
-    netProfit: 20300,
-    previousMonth: {
-      totalIncome: 24000,
-      totalExpenses: 9500,
-      netProfit: 14500,
-    },
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setSearch(value)
   }
 
-  const categories = [
-    { name: "Project Payments", amount: 28500, type: "income", percentage: 100 },
-    { name: "Materials", amount: -3700, type: "expense", percentage: 45 },
-    { name: "Subcontractors", amount: -3200, type: "expense", percentage: 39 },
-    { name: "Equipment", amount: -450, type: "expense", percentage: 5 },
-    { name: "Insurance", amount: -850, type: "expense", percentage: 10 },
-  ]
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Loading Transactions...</h2>
+          <Progress className="w-64 h-2" />
+        </div>
+      </div>
+    )
+  }
 
-  const filteredTransactions = transactions.filter(
-    (transaction) =>
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.project.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex flex-col min-h-screen items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Error Loading Transactions</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const filteredTransactions = transactions
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -121,7 +70,6 @@ export default function Finances() {
         <div className="flex items-center gap-4">
           <SidebarTrigger />
           <h1 className="text-2xl font-bold">Finances</h1>
-          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
@@ -129,7 +77,7 @@ export default function Finances() {
             <Input
               placeholder="Search transactions..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 w-64"
             />
           </div>
@@ -237,9 +185,11 @@ export default function Finances() {
                 <TableBody>
                   {filteredTransactions.slice(0, 8).map((transaction) => (
                     <TableRow key={transaction.id}>
-                      <TableCell className="text-sm">{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-sm">{new Date(transaction.transaction_date).toLocaleDateString()}</TableCell>
                       <TableCell className="font-medium">{transaction.description}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{transaction.project}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {transaction.project ? transaction.project.name : 'General'}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
                           {transaction.category}
@@ -249,7 +199,7 @@ export default function Finances() {
                         className={`text-right font-medium ${transaction.type === "income" ? "text-green-600" : "text-red-600"
                           }`}
                       >
-                        {transaction.type === "income" ? "+" : ""}${Math.abs(transaction.amount).toLocaleString()}
+                        {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -293,7 +243,7 @@ export default function Finances() {
         </div>
       </div>
 
-      <AddTransactionModal open={showAddModal} onOpenChange={setShowAddModal} />
+      <AddTransactionModal open={showAddModal} onOpenChange={setShowAddModal} onSuccess={() => refresh()} />
     </div>
   )
 }
