@@ -51,6 +51,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE TYPE "public"."transaction_type" AS ENUM (
+    'income',
+    'expense'
+);
+
+
+ALTER TYPE "public"."transaction_type" OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_user_company_ids"() RETURNS "uuid"[]
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
