@@ -384,9 +384,7 @@ INSERT INTO "public"."materials" ("id", "company_id", "name", "category", "unit"
 -- Data for Name: projects; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO "public"."projects" ("id", "company_id", "name", "description", "status", "created_at", "updated_at") VALUES
-	('b39904c9-b25b-4b7f-979f-ac7d23d27f85', '7a80462a-79bd-4ada-b214-73ddb2ae7416', 'Brown Residence Renovation', 'Complete home renovation including kitchen and bathrooms', 'in_progress', '2025-08-07 18:44:28.351894', '2025-08-07 18:44:28.351894'),
-	('6a6d6047-81d8-4ec4-a9eb-6d759f0dd216', '7a80462a-79bd-4ada-b214-73ddb2ae7416', 'Davis Office Building', 'New commercial office building construction', 'planning', '2025-08-07 18:44:28.351894', '2025-08-07 18:44:28.351894');
+-- Legacy projects table data removed - using projects_new instead
 
 
 --
@@ -403,7 +401,7 @@ INSERT INTO "public"."tasks" ("id", "project_id", "parent_task_id", "name", "des
 --
 
 INSERT INTO "public"."time_tracking" ("id", "employee_id", "project_id", "clock_in", "clock_out", "break_duration", "total_hours", "overtime_hours", "hourly_rate", "location_lat", "location_lng", "notes", "status", "created_at", "updated_at") VALUES
-	('c118fb71-2dfb-4906-be98-89fbda9586f8', '13636604-3ccb-42db-a3ed-e9651719bc51', 'b39904c9-b25b-4b7f-979f-ac7d23d27f85', '2024-01-15 08:00:00', '2024-01-15 16:00:00', 0, 8.00, 0.00, 35.00, NULL, NULL, NULL, 'completed', '2025-08-07 18:44:28.351894', '2025-08-07 18:44:28.351894');
+	('c118fb71-2dfb-4906-be98-89fbda9586f8', '13636604-3ccb-42db-a3ed-e9651719bc51', '0420c15b-2dce-4537-a236-73462365c661', '2024-01-15 08:00:00', '2024-01-15 16:00:00', 0, 8.00, 0.00, 35.00, NULL, NULL, NULL, 'completed', '2025-08-07 18:44:28.351894', '2025-08-07 18:44:28.351894');
 
 
 --
