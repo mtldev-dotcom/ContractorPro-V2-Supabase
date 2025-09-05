@@ -112,6 +112,38 @@ ContractorPro-V2-Supabase/
 └── middleware.ts              # Next.js middleware for auth
 ```
 
+## ⚡ Quick Start (2 minutes)
+
+For developers who want to get up and running immediately:
+
+```bash
+# 1. Clone and install
+git clone https://github.com/yourusername/contractor-management-app.git
+cd ContractorPro-V2-Supabase
+npm install
+
+# 2. Start Supabase locally (requires Docker)
+npx supabase start
+
+# 3. Set up environment (copy the output from step 2)
+cp .env.example .env.local
+# Edit .env.local with the local Supabase credentials
+
+# 4. Apply migrations and seed data
+npx supabase db reset --seed
+
+# 5. Start the app
+npm run dev
+```
+
+🎉 **That's it!** Open [http://localhost:3000](http://localhost:3000) and start exploring.
+
+**Default login credentials:**
+- Email: `admin@contractorpro.com`
+- Password: `admin123`
+
+---
+
 ## 🚦 Getting Started
 
 ### Prerequisites
@@ -119,9 +151,92 @@ ContractorPro-V2-Supabase/
 - **Node.js** >= 18.0.0
 - **npm** >= 8.0.0
 - **Git**
-- **Supabase Account** - [Sign up at supabase.com](https://supabase.com)
+- **Docker Desktop** (for local Supabase development)
+- **Supabase CLI** - [Install guide](https://supabase.com/docs/guides/cli)
 
-### Installation
+### Installation Options
+
+#### Option 1: Local Development with Supabase CLI (Recommended)
+
+1. **Install Supabase CLI**
+   ```bash
+   # macOS
+   brew install supabase/tap/supabase
+   
+   # Windows (via Scoop)
+   scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+   scoop install supabase
+   
+   # Linux/WSL
+   curl -fsSL https://supabase.com/install.sh | sh
+   
+   # Or via npm (cross-platform)
+   npm install -g supabase
+   ```
+
+2. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/contractor-management-app.git
+   cd ContractorPro-V2-Supabase
+   ```
+
+3. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+4. **Start local Supabase services**
+   ```bash
+   # Initialize Supabase (if not already done)
+   supabase init
+   
+   # Start all services (Database, Auth, Edge Functions, etc.)
+   supabase start
+   ```
+   
+   This will:
+   - Start PostgreSQL database on `localhost:54322`
+   - Start Supabase Studio on `http://localhost:54323`
+   - Start Edge Functions on `http://localhost:54321`
+   - Generate local API keys
+
+5. **Set up local environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Configure your `.env.local` file with local Supabase credentials:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_local_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_local_service_role_key
+   ```
+   
+   > 💡 **Tip**: Run `supabase status` to get your local API keys
+
+6. **Apply database migrations**
+   ```bash
+   # Reset and apply all migrations
+   supabase db reset
+   
+   # Or apply migrations without reset
+   supabase db push
+   ```
+
+7. **Seed the database (optional)**
+   ```bash
+   # Apply seed data
+   supabase db reset --seed
+   ```
+
+8. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+#### Option 2: Cloud Development with Supabase Dashboard
 
 1. **Clone the repository**
    ```bash
@@ -134,7 +249,17 @@ ContractorPro-V2-Supabase/
    npm install
    ```
 
-3. **Set up environment variables**
+3. **Create Supabase project**
+   - Sign up at [supabase.com](https://supabase.com)
+   - Create a new project in [Supabase Dashboard](https://supabase.com/dashboard)
+
+4. **Link your project**
+   ```bash
+   supabase login
+   supabase link --project-ref your-project-ref
+   ```
+
+5. **Set up environment variables**
    ```bash
    cp .env.example .env.local
    ```
@@ -146,18 +271,12 @@ ContractorPro-V2-Supabase/
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
    ```
 
-4. **Set up Supabase**
-   - Create a new project in [Supabase Dashboard](https://supabase.com/dashboard)
-   - Run the included migrations:
-     ```bash
-     npm run db:push
-     ```
-   - (Optional) Seed the database with sample data:
-     ```bash
-     npm run db:seed
-     ```
+6. **Apply migrations to cloud**
+   ```bash
+   supabase db push
+   ```
 
-5. **Start the development server**
+7. **Start the development server**
    ```bash
    npm run dev
    ```
@@ -198,14 +317,80 @@ The application uses a PostgreSQL database with the following core entities:
 
 ## 🔧 Available Scripts
 
+### Frontend Scripts
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
 - `npm run type-check` - Run TypeScript type checking
-- `npm run db:generate` - Generate Supabase types
-- `npm run db:push` - Push database migrations
-- `npm run db:seed` - Seed database with sample data
+
+### Supabase CLI Commands
+
+#### Local Development
+```bash
+# Start local Supabase stack
+supabase start
+
+# Stop local Supabase stack
+supabase stop
+
+# Check status of local services
+supabase status
+
+# Reset local database (with migrations)
+supabase db reset
+
+# Reset local database with seed data
+supabase db reset --seed
+
+# View local database in browser
+supabase db studio
+```
+
+#### Database Management
+```bash
+# Generate new migration
+supabase db diff --file migration_name
+
+# Apply migrations to local database
+supabase db push
+
+# Pull remote schema changes
+supabase db pull
+
+# Generate TypeScript types
+supabase gen types typescript --local > types/supabase.ts
+
+# Run specific migration
+supabase migration up --file 20230101000000_migration.sql
+```
+
+#### Auth & Functions
+```bash
+# Deploy edge functions
+supabase functions deploy function_name
+
+# Serve edge functions locally
+supabase functions serve
+
+# View function logs
+supabase functions logs function_name
+```
+
+#### Cloud Operations
+```bash
+# Login to Supabase
+supabase login
+
+# Link to remote project
+supabase link --project-ref your-project-ref
+
+# Deploy to production
+supabase db push --linked
+
+# Generate types from remote
+supabase gen types typescript --linked > types/supabase.ts
+```
 
 ## 🚀 Deployment
 
@@ -258,6 +443,102 @@ npm run test:coverage
 
 # Run E2E tests
 npm run test:e2e
+```
+
+## 🛠️ Local Development Tips
+
+### Working with Local Supabase
+
+#### Database Access
+- **Supabase Studio**: Access your local database at `http://localhost:54323`
+- **PostgreSQL Direct**: Connect to `postgresql://postgres:postgres@localhost:54322/postgres`
+- **Default Credentials**: Username: `postgres`, Password: `postgres`
+
+#### Useful Local URLs
+```
+Database:         http://localhost:54323
+API Gateway:      http://localhost:54321
+Inbucket (Email): http://localhost:54324
+```
+
+#### Development Workflow
+1. **Make Schema Changes**
+   ```bash
+   # Create a new migration
+   supabase db diff --file add_new_table
+   
+   # Apply and test locally
+   supabase db reset
+   ```
+
+2. **Test with Seed Data**
+   ```bash
+   # Reset with fresh seed data
+   supabase db reset --seed
+   ```
+
+3. **Generate Updated Types**
+   ```bash
+   # Generate types after schema changes
+   supabase gen types typescript --local > types/supabase.ts
+   ```
+
+4. **Deploy to Cloud**
+   ```bash
+   # Push changes to production
+   supabase db push --linked
+   ```
+
+### Common Issues & Solutions
+
+#### Port Conflicts
+If you encounter port conflicts:
+```bash
+# Check what's running on ports
+lsof -i :54321
+lsof -i :54322
+lsof -i :54323
+
+# Stop conflicting services
+supabase stop
+
+# Start with different ports (optional)
+supabase start --ignore-health-check
+```
+
+#### Database Connection Issues
+```bash
+# Check if Docker is running
+docker ps
+
+# Restart Supabase services
+supabase stop
+supabase start
+
+# View service logs
+supabase logs
+```
+
+#### Migration Issues
+```bash
+# If migrations fail, reset and retry
+supabase db reset --linked
+
+# Check migration status
+supabase migration list
+
+# Repair migration history
+supabase migration repair --status applied --version 20230101000000
+```
+
+#### Type Generation Issues
+```bash
+# Clear and regenerate types
+rm -rf types/supabase.ts
+supabase gen types typescript --local > types/supabase.ts
+
+# For remote types
+supabase gen types typescript --linked > types/supabase.ts
 ```
 
 ## 📱 Features Deep Dive
