@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,6 +40,7 @@ interface Client {
 
 export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: EditProjectModalProps) {
   const { toast } = useToast();
+  const t = useTranslations('projects');
   const [formData, setFormData] = useState({
     name: "",
     client: "",
@@ -77,6 +79,11 @@ export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: E
 
       if (error) {
         console.error("Error fetching project details:", error);
+        toast({
+          title: t('editProjectModal.errorUpdating'),
+          description: t('editProjectModal.errorLoadingProject'),
+          variant: 'destructive',
+        });
         return;
       }
 
@@ -123,16 +130,16 @@ export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: E
       }
 
       toast({
-        title: "Project Updated",
-        description: `${formData.name} has been updated successfully.`,
+        title: t('editProjectModal.projectUpdated'),
+        description: t('editProjectModal.projectUpdatedDesc', { projectName: formData.name }),
       });
       onSuccess?.();
       onOpenChange(false);
     } catch (error: any) {
       //console.error("Error updating project:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to update project.",
+        title: t('editProjectModal.errorUpdating'),
+        description: error.message || t('editProjectModal.errorUpdatingDesc'),
         variant: "destructive",
       });
     }
@@ -142,66 +149,69 @@ export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: E
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Project</DialogTitle>
-          <DialogDescription>Update the project details below.</DialogDescription>
+          <DialogTitle>{t('editProjectModal.title')}</DialogTitle>
+          <DialogDescription>{t('editProjectModal.description')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Project Name</Label>
+              <Label htmlFor="name">{t('addProjectModal.projectName')}</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder={t('addProjectModal.projectNamePlaceholder')}
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="client">Client</Label>
+              <Label htmlFor="client">{t('addProjectModal.clientName')}</Label>
               <Select
                 value={formData.client}
                 onValueChange={(value) => setFormData({ ...formData, client: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a client" />
+                  <SelectValue placeholder={t('addProjectModal.selectClient')} />
                 </SelectTrigger>
                 <SelectContent>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.first_name} {client.last_name} ({client.company_name || "No Company"})
+                      {client.first_name} {client.last_name} ({client.company_name || t('addProjectModal.noClient')})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="address">Job Site Address</Label>
+              <Label htmlFor="address">{t('addProjectModal.siteAddress')}</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder={t('addProjectModal.addressLine1Placeholder')}
                 required
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="budget">Budget ($)</Label>
+                <Label htmlFor="budget">{t('addProjectModal.budget')}</Label>
                 <Input
                   id="budget"
                   type="number"
                   value={formData.budget}
                   onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                  placeholder={t('addProjectModal.budgetPlaceholder')}
                   required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">{t('addProjectModal.projectStatus')}</Label>
                 <Select
                   value={formData.status}
                   onValueChange={(value) => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder={t('addProjectModal.selectStatus')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="planning">Planning</SelectItem>
@@ -215,7 +225,7 @@ export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: E
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="startDate">Start Date</Label>
+                <Label htmlFor="startDate">{t('addProjectModal.estimatedStartDate')}</Label>
                 <Input
                   id="startDate"
                   type="date"
@@ -225,7 +235,7 @@ export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: E
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="dueDate">Due Date</Label>
+                <Label htmlFor="dueDate">{t('addProjectModal.estimatedEndDate')}</Label>
                 <Input
                   id="dueDate"
                   type="date"
@@ -236,20 +246,21 @@ export function EditProjectModal({ open, onOpenChange, projectId, onSuccess }: E
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('addProjectModal.projectDescription')}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder={t('addProjectModal.projectDescriptionPlaceholder')}
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('addProjectModal.cancel')}
             </Button>
-            <Button type="submit">Update Project</Button>
+            <Button type="submit">{t('editProjectModal.updateProject')}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

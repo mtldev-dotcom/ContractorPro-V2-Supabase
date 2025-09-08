@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useTranslations } from 'next-intl'
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -55,6 +56,9 @@ interface Project {
 export function EditTransactionModal({ open, onOpenChange, onSuccess, transaction }: EditTransactionModalProps) {
   // Hook for displaying toast notifications to user
   const { toast } = useToast()
+  
+  // Translation hook for finances namespace
+  const t = useTranslations('finances')
   
   // Loading state for form submission to prevent double-submission and show feedback
   const [isLoading, setIsLoading] = useState(false)
@@ -157,13 +161,13 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
    * Common construction/contracting business expense types
    */
   const expenseCategories = [
-    "Materials",        // Raw materials, supplies, hardware
-    "Subcontractor",    // Payments to subcontractors
-    "Equipment",        // Tool purchases, equipment rental
-    "Insurance",        // Business insurance premiums
-    "Permits",          // Building permits, licensing fees
-    "Transportation",   // Vehicle expenses, fuel, travel
-    "Other",           // Miscellaneous expenses not fitting other categories
+    "materials",        // Raw materials, supplies, hardware
+    "subcontractor",    // Payments to subcontractors
+    "equipment",        // Tool purchases, equipment rental
+    "insurance",        // Business insurance premiums
+    "permits",          // Building permits, licensing fees
+    "transportation",   // Vehicle expenses, fuel, travel
+    "other",           // Miscellaneous expenses not fitting other categories
   ]
 
   /**
@@ -172,11 +176,11 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
    * Typical payment types in construction/contracting business
    */
   const incomeCategories = [
-    "Project Payment",  // Regular project milestone payments
-    "Deposit",         // Initial project deposits/down payments
-    "Final Payment",   // Final project completion payments
-    "Change Order",    // Additional work/change order payments
-    "Other"           // Other income sources
+    "projectpayment",  // Regular project milestone payments
+    "deposit",         // Initial project deposits/down payments
+    "finalpayment",   // Final project completion payments
+    "changeorder",    // Additional work/change order payments
+    "other"           // Other income sources
   ]
 
   /**
@@ -200,8 +204,8 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
     // Ensure we have a transaction to update
     if (!transaction) {
       toast({
-        title: "Error",
-        description: "No transaction selected for editing.",
+        title: t('editTransactionModal.errorUpdatingTransaction'),
+        description: t('editTransactionModal.noTransactionSelected'),
         variant: "destructive",
       })
       return
@@ -218,7 +222,7 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
       // This is critical for Row Level Security (RLS) policies
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
-        throw new Error('You must be logged in to edit transactions')
+        throw new Error(t('editTransactionModal.loginRequired'))
       }
 
       // Prepare transaction data object for database update
@@ -245,8 +249,11 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
 
       // Success feedback: show confirmation toast to user
       toast({
-        title: "Transaction Updated",
-        description: `${formData.type === "income" ? "Income" : "Expense"} of $${formData.amount} has been updated.`,
+        title: t('editTransactionModal.transactionUpdated'),
+        description: t('editTransactionModal.transactionUpdatedDesc', {
+          type: formData.type === "income" ? t('editTransactionModal.income') : t('editTransactionModal.expense'),
+          amount: formData.amount
+        }),
       })
       
       // Close modal and trigger parent component refresh
@@ -257,8 +264,8 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
       // Error handling: show user-friendly error message
       // Avoid exposing technical database errors to end users
       toast({
-        title: "Error Updating Transaction",
-        description: err.message || "Failed to update transaction. Please try again.",
+        title: t('editTransactionModal.errorUpdatingTransaction'),
+        description: err.message || t('editTransactionModal.errorUpdatingTransactionDesc'),
         variant: "destructive",
       })
     } finally {
@@ -286,8 +293,8 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
       <DialogContent className="sm:max-w-[425px]">
         {/* Modal header with title and description */}
         <DialogHeader>
-          <DialogTitle>Edit Transaction</DialogTitle>
-          <DialogDescription>Update the transaction details below.</DialogDescription>
+          <DialogTitle>{t('editTransactionModal.title')}</DialogTitle>
+          <DialogDescription>{t('editTransactionModal.description')}</DialogDescription>
         </DialogHeader>
         
         {/* Main form with onSubmit handler */}
@@ -297,7 +304,7 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
             {/* Transaction Type Selection */}
             {/* Note: Changing type resets category to prevent invalid category/type combinations */}
             <div className="grid gap-2">
-              <Label htmlFor="type">Transaction Type</Label>
+              <Label htmlFor="type">{t('addTransactionModal.transactionType')}</Label>
               <Select
                 value={formData.type}
                 onValueChange={(value) => setFormData({ ...formData, type: value, category: "" })}
@@ -306,8 +313,8 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="income">{t('addTransactionModal.income')}</SelectItem>
+                  <SelectItem value="expense">{t('addTransactionModal.expense')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -315,12 +322,12 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
             {/* Transaction Description Input */}
             {/* Required field for transaction identification and record-keeping */}
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('addTransactionModal.description')}</Label>
               <Input
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Payment from client / Material purchase"
+                placeholder={t('addTransactionModal.descriptionPlaceholder')}
                 required
               />
             </div>
@@ -331,14 +338,14 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
               {/* Amount Input */}
               {/* Number input with decimal precision for currency values */}
               <div className="grid gap-2">
-                <Label htmlFor="amount">Amount ($)</Label>
+                <Label htmlFor="amount">{t('addTransactionModal.amount')}</Label>
                 <Input
                   id="amount"
                   type="number"
                   step="0.01"                    // Allow cents precision
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="0.00"
+                  placeholder={t('addTransactionModal.amountPlaceholder')}
                   required
                 />
               </div>
@@ -346,7 +353,7 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
               {/* Date Input */}
               {/* HTML5 date picker for consistent date format */}
               <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
+                <Label htmlFor="date">{t('addTransactionModal.date')}</Label>
                 <Input
                   id="date"
                   type="date"
@@ -360,21 +367,27 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
             {/* Category Selection */}
             {/* Dynamic category list based on transaction type (income vs expense) */}
             <div className="grid gap-2">
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">{t('addTransactionModal.category')}</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder={t('addTransactionModal.selectCategory')} />
                 </SelectTrigger>
                 <SelectContent>
                   {/* Conditional rendering of categories based on transaction type */}
-                  {(formData.type === "income" ? incomeCategories : expenseCategories).map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
+                  {(formData.type === "income" ? incomeCategories : expenseCategories).map((category) => {
+                    // Create translation key by converting category to lowercase and removing spaces
+                    const categoryKey = category.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
+                    const translationKey = `addTransactionModal.categories.${formData.type}.${categoryKey}`
+                    
+                    return (
+                      <SelectItem key={category} value={category}>
+                        {t(translationKey)}
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -382,14 +395,14 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
             {/* Project Association */}
             {/* Optional project selection for transaction categorization and reporting */}
             <div className="grid gap-2">
-              <Label htmlFor="project">Project</Label>
+              <Label htmlFor="project">{t('addTransactionModal.project')}</Label>
               <Select value={formData.project} onValueChange={(value) => setFormData({ ...formData, project: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select project" />
+                  <SelectValue placeholder={t('addTransactionModal.selectProject')} />
                 </SelectTrigger>
                 <SelectContent>
                   {/* Option for general transactions not associated with specific projects */}
-                  <SelectItem value="none">General (No Project)</SelectItem>
+                  <SelectItem value="none">{t('addTransactionModal.generalNoProject')}</SelectItem>
                   {/* Dynamic project list from database */}
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
@@ -410,10 +423,10 @@ export function EditTransactionModal({ open, onOpenChange, onSuccess, transactio
               onClick={() => onOpenChange(false)} 
               disabled={isLoading}
             >
-              Cancel
+              {t('editTransactionModal.cancel')}
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Updating..." : "Update Transaction"}
+              {isLoading ? t('editTransactionModal.updating') : t('editTransactionModal.updateTransaction')}
             </Button>
           </DialogFooter>
         </form>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from 'next-intl'
 import { Search, Plus, Filter, Phone, Mail, MapPin, Star, Building, User, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +25,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 export default function Clients() {
   const { toast } = useToast()
+  const t = useTranslations('clients')
+  const tSuppliers = useTranslations('suppliers')
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddClientModal, setShowAddClientModal] = useState(false)
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false)
@@ -51,10 +54,10 @@ export default function Clients() {
       const supabase = createClient()
       const { error } = await supabase.from('clients').update({ is_active: false }).eq('id', clientId)
       if (error) throw error
-      toast({ title: 'Client Archived', description: `${displayName} has been archived.` })
+      toast({ title: t('clientArchived'), description: t('clientArchivedDesc', { clientName: displayName }) })
       refresh()
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Failed to archive client.', variant: 'destructive' })
+      toast({ title: t('error'), description: err.message || 'Failed to archive client.', variant: 'destructive' })
     }
   }
 
@@ -76,12 +79,12 @@ export default function Clients() {
       if (!res.ok || data.error) {
         throw new Error(data?.error || 'Failed to delete client')
       }
-      toast({ title: 'Client Deleted', description: `${deleteTarget.name} has been permanently deleted.` })
+      toast({ title: t('clientDeleted'), description: t('clientDeletedDesc', { clientName: deleteTarget.name }) })
       setDeleteDialogOpen(false)
       setDeleteTarget(null)
       refresh()
     } catch (err: any) {
-      toast({ title: 'Delete Failed', description: err.message || 'Unable to delete client.', variant: 'destructive' })
+      toast({ title: t('deleteFailed'), description: err.message || t('deleteFailedDesc'), variant: 'destructive' })
     } finally {
       setIsDeleting(false)
     }
@@ -255,14 +258,14 @@ export default function Clients() {
       <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          <h1 className="text-2xl font-bold">Clients & Contacts</h1>
-          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-red-500 font-bold italic">{t('devReminder')}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search clients & suppliers..."
+              placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setSearch(e.target.value); setPage(1) }}
               className="pl-10 w-64"
@@ -272,23 +275,23 @@ export default function Clients() {
             <Filter className="h-4 w-4" />
             <Select onValueChange={(value) => { setType(value as any); setPage(1) }}>
               <SelectTrigger className="w-32">
-                <SelectValue placeholder="All types" />
+                <SelectValue placeholder={t('allTypes')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                {CLIENT_TYPES.map(t => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                <SelectItem value="all">{t('allTypes')}</SelectItem>
+                {CLIENT_TYPES.map(type => (
+                  <SelectItem key={type} value={type}>{t(type)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select onValueChange={(value) => { const v = value; setIsActive(v === 'all' ? 'all' : v === 'true'); setPage(1) }}>
               <SelectTrigger className="w-32">
-                <SelectValue placeholder="All statuses" />
+                <SelectValue placeholder={t('allStatuses')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Archived</SelectItem>
+                <SelectItem value="all">{t('allStatuses')}</SelectItem>
+                <SelectItem value="true">{t('active')}</SelectItem>
+                <SelectItem value="false">{t('archived')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -299,17 +302,17 @@ export default function Clients() {
         <Tabs defaultValue="clients" className="space-y-6">
           <div className="flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="clients">Clients</TabsTrigger>
-              <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+              <TabsTrigger value="clients">{t('clients')}</TabsTrigger>
+              <TabsTrigger value="suppliers">{tSuppliers('title')}</TabsTrigger>
             </TabsList>
             <div className="flex gap-2">
               <Button onClick={() => setShowAddClientModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Client
+                {t('addClient')}
               </Button>
               <Button variant="outline" onClick={() => setShowAddSupplierModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Supplier
+                {tSuppliers('addSupplier')}
               </Button>
             </div>
           </div>
@@ -320,25 +323,25 @@ export default function Clients() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold">{clients.length}</div>
-                  <p className="text-sm text-muted-foreground">Total Clients</p>
+                  <p className="text-sm text-muted-foreground">{t('totalClients')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold">{clients.filter((c) => c.type === "individual").length}</div>
-                  <p className="text-sm text-muted-foreground">Individual</p>
+                  <p className="text-sm text-muted-foreground">{t('individual')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold">{clients.filter((c) => c.type === "business").length}</div>
-                  <p className="text-sm text-muted-foreground">Business</p>
+                  <p className="text-sm text-muted-foreground">{t('business')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold">$0</div>
-                  <p className="text-sm text-muted-foreground">Total Revenue</p>
+                  <p className="text-sm text-muted-foreground">{t('totalRevenue')}</p>
                 </CardContent>
               </Card>
             </div>
@@ -371,7 +374,7 @@ export default function Clients() {
                               ) : (
                                 <User className="h-3 w-3" />
                               )}
-                              {client.type === "business" ? "Business" : "Individual"}
+                              {client.type === "business" ? t('business') : t('individual')}
                             </CardDescription>
                           </div>
                         </div>
@@ -402,7 +405,7 @@ export default function Clients() {
                           <ContactMethodIcon className="h-3 w-3" />
                           {client.preferred_contact_method || client.preferredContactMethod}
                         </Badge>
-                        <Badge variant="outline">{client.projectsCount} projects</Badge>
+                        <Badge variant="outline">{client.projectsCount} {t('projects')}</Badge>
                       </div>
 
                       {/* Aggregate values can be added via server joins later */}
@@ -413,10 +416,10 @@ export default function Clients() {
 
                       <div className="flex gap-2 pt-2">
                         <Button size="sm" className="flex-1">
-                          View Details
+                          {t('viewDetails')}
                         </Button>
                         <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEditClick(client.id)}>
-                          Edit
+                          {t('edit')}
                         </Button>
                       </div>
                     </CardContent>
@@ -432,19 +435,19 @@ export default function Clients() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold">{suppliers.length}</div>
-                  <p className="text-sm text-muted-foreground">Total Suppliers</p>
+                  <p className="text-sm text-muted-foreground">{tSuppliers('totalSuppliers')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold">{suppliers.filter((s) => s.category === "materials").length}</div>
-                  <p className="text-sm text-muted-foreground">Materials</p>
+                  <p className="text-sm text-muted-foreground">{tSuppliers('materials')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold">{suppliers.filter((s) => s.category === "equipment").length}</div>
-                  <p className="text-sm text-muted-foreground">Equipment</p>
+                  <p className="text-sm text-muted-foreground">{tSuppliers('equipment')}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -452,7 +455,7 @@ export default function Clients() {
                   <div className="text-2xl font-bold">
                     ${suppliers.reduce((sum, s) => sum + s.totalSpent, 0).toLocaleString()}
                   </div>
-                  <p className="text-sm text-muted-foreground">Total Spent</p>
+                  <p className="text-sm text-muted-foreground">{tSuppliers('totalSpent')}</p>
                 </CardContent>
               </Card>
             </div>
@@ -495,27 +498,27 @@ export default function Clients() {
 
                     <div className="flex items-center gap-2">
                       <Badge variant={getCategoryColor(supplier.category)}>{supplier.category}</Badge>
-                      <Badge variant="outline">{supplier.totalOrders} orders</Badge>
+                      <Badge variant="outline">{supplier.totalOrders} {tSuppliers('orders')}</Badge>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Account #</span>
+                        <span>{tSuppliers('accountNumber')}</span>
                         <span className="font-medium">{supplier.accountNumber}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>Payment Terms</span>
+                        <span>{tSuppliers('paymentTerms')}</span>
                         <span className="font-medium">{supplier.paymentTerms}</span>
                       </div>
                     </div>
 
                     <div className="space-y-2 pt-2 border-t">
                       <div className="flex justify-between text-sm">
-                        <span>Total Spent</span>
+                        <span>{tSuppliers('totalSpent')}</span>
                         <span className="font-medium">${supplier.totalSpent.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Last Order</span>
+                        <span>{tSuppliers('lastOrder')}</span>
                         <span>{new Date(supplier.lastOrder).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -526,10 +529,10 @@ export default function Clients() {
 
                     <div className="flex gap-2 pt-2">
                       <Button size="sm" className="flex-1">
-                        View Details
+                        {t('viewDetails')}
                       </Button>
                       <Button size="sm" variant="outline" className="flex-1">
-                        Edit
+                        {t('edit')}
                       </Button>
                     </div>
                   </CardContent>
@@ -550,15 +553,15 @@ export default function Clients() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete client permanently?</DialogTitle>
+            <DialogTitle>{t('deleteClientPermanently')}</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. The client
-              {deleteTarget ? ` "${deleteTarget.name}" ` : ' '}and its related communications will be permanently removed.
+              {t('deleteClientWarning1')}
+              {deleteTarget ? ` "${deleteTarget.name}" ` : ' '}{t('deleteClientWarning2')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteClient} disabled={isDeleting}>{isDeleting ? 'Deleting…' : 'Delete Permanently'}</Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>{t('cancel')}</Button>
+            <Button variant="destructive" onClick={confirmDeleteClient} disabled={isDeleting}>{isDeleting ? t('deleting') : t('deletePermanently')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
