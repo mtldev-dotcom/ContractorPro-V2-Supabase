@@ -37,21 +37,30 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Extract locale from pathname (e.g., '/en/dashboard' -> 'en')
+  const pathSegments = request.nextUrl.pathname.split('/').filter(Boolean)
+  const supportedLocales = ['en', 'fr']
+  const locale = pathSegments[0] && supportedLocales.includes(pathSegments[0]) ? pathSegments[0] : 'en'
+  const pathWithoutLocale = pathSegments[0] && supportedLocales.includes(pathSegments[0]) 
+    ? '/' + pathSegments.slice(1).join('/')
+    : request.nextUrl.pathname
+
   // redirect authenticated user away from auth pages
-  if (user && request.nextUrl.pathname.startsWith('/auth')) {
+  if (user && pathWithoutLocale.startsWith('/auth')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = `/${locale}/dashboard`
     return NextResponse.redirect(url)
   }
 
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/auth/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
+    !pathWithoutLocale.startsWith('/auth/login') &&
+    !pathWithoutLocale.startsWith('/auth') &&
+    pathWithoutLocale !== '/' // allow access to root page
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
+    url.pathname = `/${locale}/auth/login`
     return NextResponse.redirect(url)
   }
 

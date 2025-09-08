@@ -6,7 +6,15 @@ import {routing} from './i18n/routing';
 const intlMiddleware = createMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
-  // First, handle internationalization
+  // Handle authentication first for protected routes
+  const authResponse = await updateSession(request);
+  
+  // If auth middleware wants to redirect, return that redirect
+  if (authResponse && authResponse.status >= 300 && authResponse.status < 400) {
+    return authResponse;
+  }
+  
+  // Otherwise, handle internationalization
   const intlResponse = intlMiddleware(request);
   
   // If intl middleware wants to redirect, return that redirect
@@ -14,8 +22,8 @@ export async function middleware(request: NextRequest) {
     return intlResponse;
   }
   
-  // Otherwise, handle the Supabase session
-  return updateSession(request);
+  // Return the auth response (which might have updated cookies)
+  return authResponse;
 }
 
 export const config = {
