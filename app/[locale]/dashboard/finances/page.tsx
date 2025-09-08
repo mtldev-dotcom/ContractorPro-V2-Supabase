@@ -17,7 +17,10 @@ import {
   X,
   ChevronDown,
   FileText,
-  BarChart3
+  BarChart3,
+  Edit,
+  Trash2,
+  MoreHorizontal
 } from "lucide-react"
 // UI components from our component library
 import { Button } from "@/components/ui/button"
@@ -33,9 +36,13 @@ import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 // Custom components for transaction management
 import { AddTransactionModal } from "@/components/add-transaction-modal"
+import { EditTransactionModal } from "@/components/edit-transaction-modal"
 import { useTransactions } from "@/hooks/use-transactions"
+import { useToast } from "@/hooks/use-toast"
+import { createClient } from "@/utils/supabase/client"
 
 // TypeScript type definitions for component state
 type SortField = 'date' | 'amount' | 'description' | 'category' // Fields that can be sorted
@@ -59,7 +66,11 @@ export default function Finances() {
   // Search and UI state
   const [searchQuery, setSearchQuery] = useState("") // Current search query for filtering transactions
   const [showAddModal, setShowAddModal] = useState(false) // Controls visibility of add transaction modal
+  const [showEditModal, setShowEditModal] = useState(false) // Controls visibility of edit transaction modal
   const [showFilters, setShowFilters] = useState(false) // Controls visibility of advanced filters panel
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null) // Currently selected transaction for editing
+  const [userRole, setUserRole] = useState<string | null>(null) // Current user's role for permission checking
+  const [isLoadingRole, setIsLoadingRole] = useState(true) // Loading state for user role fetch
   
   // Filter state - these control which transactions are displayed
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]) // Array of selected category filters
@@ -74,8 +85,122 @@ export default function Finances() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc') // Current sort direction
   const [viewMode, setViewMode] = useState<ViewMode>('table') // Current view mode for displaying transactions
 
+  // Toast hook for user notifications
+  const { toast } = useToast()
+
   // ===== HELPER FUNCTIONS =====
-  
+
+  /**
+   * Check if current user is an admin
+   * Admins have permission to edit and delete transactions
+   */
+  const isAdmin = userRole === 'admin'
+
+  /**
+   * Fetch user role from database on component mount
+   * This determines what actions the user can perform
+   */
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError || !user) {
+          setUserRole(null)
+          return
+        }
+
+        // Get user role from users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (userError) {
+          console.error('Error fetching user role:', userError)
+          setUserRole(null)
+          return
+        }
+
+        setUserRole(userData?.role || null)
+      } catch (err) {
+        console.error('Error in fetchUserRole:', err)
+        setUserRole(null)
+      } finally {
+        setIsLoadingRole(false)
+      }
+    }
+
+    fetchUserRole()
+  }, [])
+
+  /**
+   * Handle editing a transaction (admin only)
+   * Opens the edit modal with the selected transaction data
+   */
+  const handleEditTransaction = (transaction: any) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can edit transactions.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setSelectedTransaction(transaction)
+    setShowEditModal(true)
+  }
+
+  /**
+   * Handle deleting a transaction (admin only)
+   * Shows confirmation and deletes the transaction from database
+   */
+  const handleDeleteTransaction = async (transaction: any) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can delete transactions.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Show confirmation dialog
+    if (!window.confirm(`Are you sure you want to delete this transaction?\n\nDescription: ${transaction.description}\nAmount: $${Math.abs(Number(transaction.amount)).toLocaleString()}\n\nThis action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const supabase = createClient()
+      
+      // Delete transaction from database
+      const { error } = await supabase
+        .from('financial_transactions')
+        .delete()
+        .eq('id', transaction.id)
+
+      if (error) throw error
+
+      // Show success message
+      toast({
+        title: "Transaction Deleted",
+        description: `Transaction "${transaction.description}" has been deleted successfully.`,
+      })
+
+      // Refresh the transaction list
+      refresh()
+    } catch (err: any) {
+      toast({
+        title: "Error Deleting Transaction",
+        description: err.message || "Failed to delete transaction. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   /**
    * Calculate date range for filtering based on selected dateRange option
    * Converts predefined date ranges (today, week, month, etc.) into actual start/end dates
@@ -288,8 +413,8 @@ export default function Finances() {
   const activeFiltersCount = selectedCategories.length + selectedProjects.length + 
     (transactionType !== 'all' ? 1 : 0) + (dateRange !== 'month' ? 1 : 0)
 
-  // Show loading state
-  if (isLoading) {
+  // Show loading state (including role loading)
+  if (isLoading || isLoadingRole) {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center p-4">
         <div className="text-center">
@@ -603,6 +728,7 @@ export default function Finances() {
                       <TableHead className="text-right cursor-pointer" onClick={() => handleSort('amount')}>
                         Amount {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </TableHead>
+                      {isAdmin && <TableHead className="w-[50px]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -627,6 +753,31 @@ export default function Finances() {
                         >
                           {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditTransaction(transaction)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteTransaction(transaction)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -648,12 +799,37 @@ export default function Finances() {
                           {new Date(transaction.transaction_date).toLocaleDateString()}
                         </p>
                       </div>
-                      <div
-                        className={`text-lg font-bold ${
-                          transaction.type === "income" ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`text-lg font-bold ${
+                            transaction.type === "income" ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
+                        </div>
+                        {isAdmin && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditTransaction(transaction)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteTransaction(transaction)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
@@ -786,6 +962,12 @@ export default function Finances() {
       </div>
 
       <AddTransactionModal open={showAddModal} onOpenChange={setShowAddModal} onSuccess={() => refresh()} />
+      <EditTransactionModal 
+        open={showEditModal} 
+        onOpenChange={setShowEditModal} 
+        onSuccess={() => refresh()} 
+        transaction={selectedTransaction}
+      />
     </div>
   )
 }
