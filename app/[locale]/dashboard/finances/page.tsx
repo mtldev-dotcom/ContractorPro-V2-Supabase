@@ -2,6 +2,8 @@
 
 // React hooks for state management and performance optimization
 import { useState, useMemo, useEffect } from "react"
+// Next-intl for internationalization
+import { useTranslations } from 'next-intl'
 // Lucide React icons for UI elements
 import { 
   Search, 
@@ -61,6 +63,11 @@ type ViewMode = 'table' | 'cards' | 'summary' // Different view modes for displa
  * - Transaction management (add, view, search)
  */
 export default function Finances() {
+  // ===== INTERNATIONALIZATION =====
+  
+  // Translation hook for finances namespace
+  const t = useTranslations('finances')
+
   // ===== STATE MANAGEMENT =====
   
   // Search and UI state
@@ -143,8 +150,8 @@ export default function Finances() {
   const handleEditTransaction = (transaction: any) => {
     if (!isAdmin) {
       toast({
-        title: "Access Denied",
-        description: "Only administrators can edit transactions.",
+        title: t('accessDenied'),
+        description: t('adminOnlyEdit'),
         variant: "destructive",
       })
       return
@@ -161,15 +168,15 @@ export default function Finances() {
   const handleDeleteTransaction = async (transaction: any) => {
     if (!isAdmin) {
       toast({
-        title: "Access Denied",
-        description: "Only administrators can delete transactions.",
+        title: t('accessDenied'),
+        description: t('adminOnlyDelete'),
         variant: "destructive",
       })
       return
     }
 
     // Show confirmation dialog
-    if (!window.confirm(`Are you sure you want to delete this transaction?\n\nDescription: ${transaction.description}\nAmount: $${Math.abs(Number(transaction.amount)).toLocaleString()}\n\nThis action cannot be undone.`)) {
+    if (!window.confirm(`${t('confirmDelete')}\n\n${t('description')}: ${transaction.description}\n${t('amount')}: $${Math.abs(Number(transaction.amount)).toLocaleString()}\n\n${t('deleteWarning')}`)) {
       return
     }
 
@@ -186,16 +193,16 @@ export default function Finances() {
 
       // Show success message
       toast({
-        title: "Transaction Deleted",
-        description: `Transaction "${transaction.description}" has been deleted successfully.`,
+        title: t('transactionDeleted'),
+        description: t('transactionDeletedDesc', { description: transaction.description }),
       })
 
       // Refresh the transaction list
       refresh()
     } catch (err: any) {
       toast({
-        title: "Error Deleting Transaction",
-        description: err.message || "Failed to delete transaction. Please try again.",
+        title: t('errorDeletingTransaction'),
+        description: err.message || t('errorDeletingTransactionDesc'),
         variant: "destructive",
       })
     }
@@ -418,7 +425,7 @@ export default function Finances() {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center p-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Loading Transactions...</h2>
+          <h2 className="text-2xl font-bold mb-4">{t('loading')}</h2>
           <Progress className="w-64 h-2" />
         </div>
       </div>
@@ -430,10 +437,10 @@ export default function Finances() {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">Error Loading Transactions</h2>
+          <h2 className="text-2xl font-bold mb-4 text-red-600">{t('errorLoading')}</h2>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button onClick={() => refresh()} variant="outline">
-            Try Again
+            {t('tryAgain')}
           </Button>
         </div>
       </div>
@@ -446,10 +453,10 @@ export default function Finances() {
       <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          <h1 className="text-2xl font-bold">Finances</h1>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
           {activeFiltersCount > 0 && (
             <Badge variant="secondary" className="ml-2">
-              {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
+              {t('filtersActive', { count: activeFiltersCount })}
             </Badge>
           )}
         </div>
@@ -457,7 +464,7 @@ export default function Finances() {
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search transactions..."
+              placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 w-64"
@@ -470,9 +477,9 @@ export default function Finances() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="table">Table</SelectItem>
-              <SelectItem value="cards">Cards</SelectItem>
-              <SelectItem value="summary">Summary</SelectItem>
+              <SelectItem value="table">{t('tableView')}</SelectItem>
+              <SelectItem value="cards">{t('cardView')}</SelectItem>
+              <SelectItem value="summary">{t('summaryView')}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -481,7 +488,7 @@ export default function Finances() {
             <SheetTrigger asChild>
               <Button variant="outline">
                 <Filter className="h-4 w-4 mr-2" />
-                Filters
+                {t('filters')}
                 {activeFiltersCount > 0 && (
                   <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
                     {activeFiltersCount}
@@ -491,35 +498,35 @@ export default function Finances() {
             </SheetTrigger>
             <SheetContent className="w-80">
               <SheetHeader>
-                <SheetTitle>Filter Transactions</SheetTitle>
+                <SheetTitle>{t('filterTransactions')}</SheetTitle>
                 <SheetDescription>
-                  Customize your view with advanced filtering options
+                  {t('customizeView')}
                 </SheetDescription>
               </SheetHeader>
               
               <div className="space-y-6 mt-6">
                 {/* Date Range Filter */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Date Range</Label>
+                  <Label className="text-sm font-medium">{t('dateRange')}</Label>
                   <Select value={dateRange} onValueChange={(value: typeof dateRange) => setDateRange(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Time</SelectItem>
-                      <SelectItem value="today">Today</SelectItem>
-                      <SelectItem value="week">This Week</SelectItem>
-                      <SelectItem value="month">This Month</SelectItem>
-                      <SelectItem value="quarter">This Quarter</SelectItem>
-                      <SelectItem value="year">This Year</SelectItem>
-                      <SelectItem value="custom">Custom Range</SelectItem>
+                      <SelectItem value="all">{t('allTime')}</SelectItem>
+                      <SelectItem value="today">{t('today')}</SelectItem>
+                      <SelectItem value="week">{t('thisWeek')}</SelectItem>
+                      <SelectItem value="month">{t('thisMonth')}</SelectItem>
+                      <SelectItem value="quarter">{t('thisQuarter')}</SelectItem>
+                      <SelectItem value="year">{t('thisYear')}</SelectItem>
+                      <SelectItem value="custom">{t('customRange')}</SelectItem>
                     </SelectContent>
                   </Select>
                   
                   {dateRange === 'custom' && (
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label className="text-xs">From</Label>
+                        <Label className="text-xs">{t('from')}</Label>
                         <Input
                           type="date"
                           value={customStartDate}
@@ -527,7 +534,7 @@ export default function Finances() {
                         />
                       </div>
                       <div>
-                        <Label className="text-xs">To</Label>
+                        <Label className="text-xs">{t('to')}</Label>
                         <Input
                           type="date"
                           value={customEndDate}
@@ -540,22 +547,22 @@ export default function Finances() {
 
                 {/* Transaction Type Filter */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Transaction Type</Label>
+                  <Label className="text-sm font-medium">{t('transactionType')}</Label>
                   <Select value={transactionType} onValueChange={(value: typeof transactionType) => setTransactionType(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="income">Income Only</SelectItem>
-                      <SelectItem value="expense">Expenses Only</SelectItem>
+                      <SelectItem value="all">{t('allTypes')}</SelectItem>
+                      <SelectItem value="income">{t('incomeOnly')}</SelectItem>
+                      <SelectItem value="expense">{t('expensesOnly')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Category Filter */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Categories</Label>
+                  <Label className="text-sm font-medium">{t('categories')}</Label>
                   <div className="max-h-40 overflow-y-auto space-y-2">
                     {availableCategories.map((category) => (
                       <div key={category} className="flex items-center space-x-2">
@@ -580,7 +587,7 @@ export default function Finances() {
 
                 {/* Project Filter */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Projects</Label>
+                  <Label className="text-sm font-medium">{t('projects')}</Label>
                   <div className="max-h-40 overflow-y-auto space-y-2">
                     {availableProjects.map((project) => (
                       <div key={project} className="flex items-center space-x-2">
@@ -607,10 +614,10 @@ export default function Finances() {
                 
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={clearFilters} className="flex-1">
-                    Clear All
+                    {t('clearAll')}
                   </Button>
                   <Button onClick={() => setShowFilters(false)} className="flex-1">
-                    Apply Filters
+                    {t('applyFilters')}
                   </Button>
                 </div>
               </div>
@@ -619,7 +626,7 @@ export default function Finances() {
 
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Transaction
+            {t('addTransaction')}
           </Button>
         </div>
       </header>
@@ -629,35 +636,35 @@ export default function Finances() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('totalIncome')}</CardTitle>
               <TrendingUp className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">${monthlyStats.totalIncome.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
                 {monthlyStats.totalIncome >= monthlyStats.previousMonth.totalIncome ? '+' : ''}
-                ${(monthlyStats.totalIncome - monthlyStats.previousMonth.totalIncome).toLocaleString()} from last month
+                ${(monthlyStats.totalIncome - monthlyStats.previousMonth.totalIncome).toLocaleString()} {t('fromLastMonth')}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('totalExpenses')}</CardTitle>
               <TrendingDown className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">${monthlyStats.totalExpenses.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
                 {monthlyStats.totalExpenses <= monthlyStats.previousMonth.totalExpenses ? '-' : '+'}
-                ${Math.abs(monthlyStats.totalExpenses - monthlyStats.previousMonth.totalExpenses).toLocaleString()} from last month
+                ${Math.abs(monthlyStats.totalExpenses - monthlyStats.previousMonth.totalExpenses).toLocaleString()} {t('fromLastMonth')}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('netProfit')}</CardTitle>
               <DollarSign className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
@@ -666,7 +673,7 @@ export default function Finances() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {monthlyStats.netProfit >= monthlyStats.previousMonth.netProfit ? '+' : ''}
-                ${(monthlyStats.netProfit - monthlyStats.previousMonth.netProfit).toLocaleString()} from last month
+                ${(monthlyStats.netProfit - monthlyStats.previousMonth.netProfit).toLocaleString()} {t('fromLastMonth')}
               </p>
             </CardContent>
           </Card>
@@ -674,9 +681,9 @@ export default function Finances() {
 
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="table">Table View</TabsTrigger>
-            <TabsTrigger value="cards">Card View</TabsTrigger>
-            <TabsTrigger value="summary">Summary View</TabsTrigger>
+            <TabsTrigger value="table">{t('tableView')}</TabsTrigger>
+            <TabsTrigger value="cards">{t('cardView')}</TabsTrigger>
+            <TabsTrigger value="summary">{t('summaryView')}</TabsTrigger>
           </TabsList>
 
           {/* Table View */}
@@ -684,22 +691,22 @@ export default function Finances() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Transactions</CardTitle>
+                  <CardTitle>{t('transactions')}</CardTitle>
                   <CardDescription>
-                    Showing {filteredAndSortedTransactions.length} of {transactions.length} transactions
+                    {t('showingTransactions', { filtered: filteredAndSortedTransactions.length, total: transactions.length })}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label className="text-sm">Sort by:</Label>
+                  <Label className="text-sm">{t('sortBy')}</Label>
                   <Select value={sortField} onValueChange={(value: SortField) => handleSort(value)}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="date">Date</SelectItem>
-                      <SelectItem value="amount">Amount</SelectItem>
-                      <SelectItem value="description">Description</SelectItem>
-                      <SelectItem value="category">Category</SelectItem>
+                      <SelectItem value="date">{t('date')}</SelectItem>
+                      <SelectItem value="amount">{t('amount')}</SelectItem>
+                      <SelectItem value="description">{t('description')}</SelectItem>
+                      <SelectItem value="category">{t('category')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
@@ -716,210 +723,225 @@ export default function Finances() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="cursor-pointer" onClick={() => handleSort('date')}>
-                        Date {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        {t('date')} {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </TableHead>
                       <TableHead className="cursor-pointer" onClick={() => handleSort('description')}>
-                        Description {sortField === 'description' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        {t('description')} {sortField === 'description' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </TableHead>
-                      <TableHead>Project</TableHead>
+                      <TableHead>{t('project')}</TableHead>
                       <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                        Category {sortField === 'category' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        {t('category')} {sortField === 'category' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </TableHead>
-                      <TableHead className="text-right cursor-pointer" onClick={() => handleSort('amount')}>
-                        Amount {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
+                      <TableHead className="cursor-pointer text-right" onClick={() => handleSort('amount')}>
+                        {t('amount')} {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </TableHead>
-                      {isAdmin && <TableHead className="w-[50px]">Actions</TableHead>}
+                      {isAdmin && <TableHead className="w-12">{t('actions')}</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAndSortedTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell className="text-sm">
-                          {new Date(transaction.transaction_date).toLocaleDateString()}
+                    {filteredAndSortedTransactions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                          {t('noTransactions')}
                         </TableCell>
-                        <TableCell className="font-medium">{transaction.description}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {transaction.project ? transaction.project.name : 'General'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {transaction.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-medium ${
-                            transaction.type === "income" ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
-                        </TableCell>
-                        {isAdmin && (
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditTransaction(transaction)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleDeleteTransaction(transaction)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        )}
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredAndSortedTransactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell className="text-sm">
+                            {new Date(transaction.transaction_date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="font-medium">{transaction.description}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {transaction.project ? transaction.project.name : t('general')}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {transaction.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-medium ${
+                              transaction.type === "income" ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditTransaction(transaction)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    {t('edit')}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeleteTransaction(transaction)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {t('delete')}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Card View */}
+          {/* Cards View */}
           <TabsContent value="cards" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredAndSortedTransactions.map((transaction) => (
-                <Card key={transaction.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm mb-1">{transaction.description}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(transaction.transaction_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`text-lg font-bold ${
-                            transaction.type === "income" ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
-                        </div>
+              {filteredAndSortedTransactions.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-muted-foreground">
+                  {t('noTransactions')}
+                </div>
+              ) : (
+                filteredAndSortedTransactions.map((transaction) => (
+                  <Card key={transaction.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">{transaction.description}</CardTitle>
                         {isAdmin && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleEditTransaction(transaction)}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Edit
+                                {t('edit')}
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleDeleteTransaction(transaction)}
                                 className="text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
+                                {t('delete')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
                       </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <Badge variant="outline" className="text-xs">
-                        {transaction.category}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {transaction.project ? transaction.project.name : 'General'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <CardDescription>
+                        {new Date(transaction.transaction_date).toLocaleDateString()}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">{t('project')}</span>
+                          <span className="text-sm">
+                            {transaction.project ? transaction.project.name : t('general')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">{t('category')}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {transaction.category}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <span className="text-sm text-muted-foreground">{t('amount')}</span>
+                          <span
+                            className={`font-bold ${
+                              transaction.type === "income" ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {transaction.type === "income" ? "+" : ""}${Math.abs(Number(transaction.amount)).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
           {/* Summary View */}
-          <TabsContent value="summary" className="space-y-4">
+          <TabsContent value="summary" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Category Breakdown */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Category Breakdown</CardTitle>
-                  <CardDescription>Financial activity by category</CardDescription>
+                  <CardTitle>{t('categoryBreakdown')}</CardTitle>
+                  <CardDescription>{t('categoryBreakdownDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {categories.map((category, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">{category.name}</span>
-                        <span
-                          className={`text-sm font-medium ${
-                            category.type === "income" ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {category.type === "income" ? "+" : ""}${Math.abs(category.amount).toLocaleString()}
-                        </span>
-                      </div>
-                      {category.type === "expense" && (
-                        <div className="w-full bg-secondary rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full" 
-                            style={{ width: `${category.percentage}%` }}
-                          ></div>
+                  {categories.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-4">{t('noCategories')}</p>
+                  ) : (
+                    categories.map((category, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">{category.name}</span>
+                          <span
+                            className={`text-sm font-medium ${
+                              category.type === "income" ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {category.type === "income" ? "+" : ""}${Math.abs(category.amount).toLocaleString()}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {category.type === "expense" && (
+                          <div className="w-full bg-secondary rounded-full h-2">
+                            <div 
+                              className="bg-primary h-2 rounded-full" 
+                              style={{ width: `${category.percentage}%` }}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Quick Stats */}
+              {/* Recent Activity */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Quick Statistics</CardTitle>
-                  <CardDescription>Overview of filtered transactions</CardDescription>
+                  <CardTitle>{t('recentActivity')}</CardTitle>
+                  <CardDescription>{t('recentActivityDesc')}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {filteredAndSortedTransactions.filter(t => t.type === 'income').length}
+                <CardContent>
+                  <div className="space-y-4">
+                    {filteredAndSortedTransactions.slice(0, 5).map((transaction) => (
+                      <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-2 h-2 rounded-full ${
+                            transaction.type === 'income' ? 'bg-green-500' : 'bg-red-500'
+                          }`} />
+                          <div>
+                            <p className="font-medium text-sm">{transaction.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(transaction.transaction_date).toLocaleDateString()} • {transaction.category}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`font-medium text-sm ${
+                          transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'income' ? '+' : ''}${Math.abs(Number(transaction.amount)).toLocaleString()}
+                        </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">Income Transactions</div>
-                    </div>
-                    <div className="text-center p-3 bg-red-50 rounded-lg">
-                      <div className="text-2xl font-bold text-red-600">
-                        {filteredAndSortedTransactions.filter(t => t.type === 'expense').length}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Expense Transactions</div>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Average Transaction:</span>
-                      <span className="text-sm font-medium">
-                        ${filteredAndSortedTransactions.length > 0 
-                          ? (filteredAndSortedTransactions.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0) / filteredAndSortedTransactions.length).toLocaleString(undefined, { maximumFractionDigits: 2 })
-                          : '0'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Total Amount:</span>
-                      <span className="text-sm font-medium">
-                        ${filteredAndSortedTransactions.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0).toLocaleString()}
-                      </span>
-                    </div>
+                    ))}
+                    {filteredAndSortedTransactions.length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">{t('noRecentActivity')}</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -933,8 +955,8 @@ export default function Finances() {
             <CardContent className="flex items-center p-6">
               <CreditCard className="h-8 w-8 text-blue-500 mr-4" />
               <div>
-                <h3 className="font-medium">Record Payment</h3>
-                <p className="text-sm text-muted-foreground">Add project payment received</p>
+                <h3 className="font-medium">{t('recordPayment')}</h3>
+                <p className="text-sm text-muted-foreground">{t('recordPaymentDesc')}</p>
               </div>
             </CardContent>
           </Card>
@@ -943,8 +965,8 @@ export default function Finances() {
             <CardContent className="flex items-center p-6">
               <PiggyBank className="h-8 w-8 text-green-500 mr-4" />
               <div>
-                <h3 className="font-medium">Add Expense</h3>
-                <p className="text-sm text-muted-foreground">Record business expense</p>
+                <h3 className="font-medium">{t('addExpense')}</h3>
+                <p className="text-sm text-muted-foreground">{t('addExpenseDesc')}</p>
               </div>
             </CardContent>
           </Card>
@@ -953,21 +975,32 @@ export default function Finances() {
             <CardContent className="flex items-center p-6">
               <BarChart3 className="h-8 w-8 text-purple-500 mr-4" />
               <div>
-                <h3 className="font-medium">Generate Report</h3>
-                <p className="text-sm text-muted-foreground">Create financial report</p>
+                <h3 className="font-medium">{t('generateReport')}</h3>
+                <p className="text-sm text-muted-foreground">{t('generateReportDesc')}</p>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      <AddTransactionModal open={showAddModal} onOpenChange={setShowAddModal} onSuccess={() => refresh()} />
-      <EditTransactionModal 
-        open={showEditModal} 
-        onOpenChange={setShowEditModal} 
+      {/* Modals */}
+      <AddTransactionModal 
+        open={showAddModal} 
+        onOpenChange={setShowAddModal} 
         onSuccess={() => refresh()} 
-        transaction={selectedTransaction}
       />
+      
+      {selectedTransaction && (
+        <EditTransactionModal
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          transaction={selectedTransaction}
+          onSuccess={() => {
+            refresh()
+            setSelectedTransaction(null)
+          }}
+        />
+      )}
     </div>
   )
 }
