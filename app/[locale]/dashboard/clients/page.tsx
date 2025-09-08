@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AddClientModal } from "@/components/add-client-modal"
 import { AddSupplierModal } from "@/components/add-supplier-modal"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -267,15 +270,27 @@ export default function Clients() {
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4" />
-            <select className="border rounded px-2 py-1 text-sm bg-background" onChange={(e) => { setType(e.target.value as any); setPage(1) }}>
-              <option value="all">All types</option>
-              {CLIENT_TYPES.map(t => (<option key={t} value={t}>{t}</option>))}
-            </select>
-            <select className="border rounded px-2 py-1 text-sm bg-background" onChange={(e) => { const v = e.target.value; setIsActive(v === 'all' ? 'all' : v === 'true'); setPage(1) }}>
-              <option value="all">All statuses</option>
-              <option value="true">Active</option>
-              <option value="false">Archived</option>
-            </select>
+            <Select onValueChange={(value) => { setType(value as any); setPage(1) }}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {CLIENT_TYPES.map(t => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(value) => { const v = value; setIsActive(v === 'all' ? 'all' : v === 'true'); setPage(1) }}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Archived</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </header>

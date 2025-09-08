@@ -10,6 +10,10 @@ import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { AddProjectModal } from "@/components/add-project-modal"
 import { EditProjectModal } from '@/components/edit-project-modal';
 import { createClient } from '@/utils/supabase/client';
@@ -44,10 +48,44 @@ export default function Projects() {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center p-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">{t("loading")}</h2>
-          <Progress className="w-64 h-2" />
+      <div className="flex flex-col min-h-screen bg-background">
+        <header className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+            <Skeleton className="h-8 w-32" />
+          </div>
+        </header>
+        <div className="flex-1 p-4 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-4 w-24" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 flex-1" />
+                    <Skeleton className="h-8 flex-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -56,16 +94,30 @@ export default function Projects() {
   // Show error state
   if (error) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">{t("errorLoading")}</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button
-            onClick={() => window.location.reload()}
-            variant="outline"
-          >
-            {t("tryAgain")}
-          </Button>
+      <div className="flex flex-col min-h-screen bg-background">
+        <header className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+            <h1 className="text-2xl font-bold">{t("title")}</h1>
+          </div>
+        </header>
+        <div className="flex-1 p-4">
+          <Alert variant="destructive" className="max-w-md mx-auto mt-8">
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="font-medium">{t("errorLoading")}</p>
+                <p className="text-sm">{error}</p>
+                <Button
+                  onClick={() => refresh()}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                >
+                  {t("tryAgain")}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
         </div>
       </div>
     );
@@ -171,16 +223,24 @@ export default function Projects() {
           {/* Status Filter */}
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4" />
-            <select
-              className="border rounded px-2 py-1 text-sm bg-background"
+            <Select
               value={statusFilter}
-              onChange={(e) => { const v = e.target.value as ProjectStatus | 'all'; setStatusFilter(v); setStatus(v); setPage(1); }}
+              onValueChange={(value: ProjectStatus | 'all') => { 
+                setStatusFilter(value); 
+                setStatus(value); 
+                setPage(1); 
+              }}
             >
-              <option value="all">{t("allStatuses")}</option>
-              {PROJECT_STATUSES.map(s => (
-                <option key={s} value={s}>{formatStatusLabel(s)}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder={t("allStatuses")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("allStatuses")}</SelectItem>
+                {PROJECT_STATUSES.map(s => (
+                  <SelectItem key={s} value={s}>{formatStatusLabel(s)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -341,10 +401,42 @@ export default function Projects() {
 
       {/* Pagination */}
       {total > pageSize && (
-        <div className="flex items-center justify-center gap-4 py-6">
-          <Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>{t("prev")}</Button>
-          <span className="text-sm">{t("page")} {page} {t("of")} {Math.ceil(total / pageSize)}</span>
-          <Button variant="outline" disabled={page >= Math.ceil(total / pageSize)} onClick={() => setPage(page + 1)}>{t("next")}</Button>
+        <div className="flex justify-center py-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setPage(page - 1)}
+                  className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {/* Show page numbers */}
+              {Array.from({ length: Math.min(5, Math.ceil(total / pageSize)) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(page - 2 + i, Math.ceil(total / pageSize) - 4 + i));
+                if (pageNum > Math.ceil(total / pageSize)) return null;
+                
+                return (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      onClick={() => setPage(pageNum)}
+                      isActive={pageNum === page}
+                      className="cursor-pointer"
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setPage(page + 1)}
+                  className={page >= Math.ceil(total / pageSize) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
