@@ -1,6 +1,8 @@
 "use client"
 
+// React hooks for state management and performance optimization
 import { useState, useMemo, useEffect } from "react"
+// Lucide React icons for UI elements
 import { 
   Search, 
   Plus, 
@@ -17,6 +19,7 @@ import {
   FileText,
   BarChart3
 } from "lucide-react"
+// UI components from our component library
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,28 +33,54 @@ import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+// Custom components for transaction management
 import { AddTransactionModal } from "@/components/add-transaction-modal"
 import { useTransactions } from "@/hooks/use-transactions"
 
-type SortField = 'date' | 'amount' | 'description' | 'category'
-type SortDirection = 'asc' | 'desc'
-type ViewMode = 'table' | 'cards' | 'summary'
+// TypeScript type definitions for component state
+type SortField = 'date' | 'amount' | 'description' | 'category' // Fields that can be sorted
+type SortDirection = 'asc' | 'desc' // Sort direction options
+type ViewMode = 'table' | 'cards' | 'summary' // Different view modes for displaying transactions
 
+/**
+ * Finances Component - Main financial management dashboard
+ * 
+ * This component provides a comprehensive interface for managing financial transactions
+ * with advanced filtering, sorting, and multiple view modes. It includes:
+ * - Financial overview cards showing income, expenses, and profit
+ * - Advanced filtering by date, type, category, and project
+ * - Multiple view modes (table, cards, summary)
+ * - Sorting capabilities
+ * - Transaction management (add, view, search)
+ */
 export default function Finances() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([])
-  const [transactionType, setTransactionType] = useState<'all' | 'income' | 'expense'>('all')
-  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom'>('month')
-  const [customStartDate, setCustomStartDate] = useState("")
-  const [customEndDate, setCustomEndDate] = useState("")
-  const [sortField, setSortField] = useState<SortField>('date')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [viewMode, setViewMode] = useState<ViewMode>('table')
-  const [showFilters, setShowFilters] = useState(false)
+  // ===== STATE MANAGEMENT =====
+  
+  // Search and UI state
+  const [searchQuery, setSearchQuery] = useState("") // Current search query for filtering transactions
+  const [showAddModal, setShowAddModal] = useState(false) // Controls visibility of add transaction modal
+  const [showFilters, setShowFilters] = useState(false) // Controls visibility of advanced filters panel
+  
+  // Filter state - these control which transactions are displayed
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]) // Array of selected category filters
+  const [selectedProjects, setSelectedProjects] = useState<string[]>([]) // Array of selected project filters
+  const [transactionType, setTransactionType] = useState<'all' | 'income' | 'expense'>('all') // Filter by transaction type
+  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom'>('month') // Predefined date range filter
+  const [customStartDate, setCustomStartDate] = useState("") // Custom date range start (when dateRange is 'custom')
+  const [customEndDate, setCustomEndDate] = useState("") // Custom date range end (when dateRange is 'custom')
+  
+  // Sorting and display state
+  const [sortField, setSortField] = useState<SortField>('date') // Current field to sort by
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc') // Current sort direction
+  const [viewMode, setViewMode] = useState<ViewMode>('table') // Current view mode for displaying transactions
 
-  // Calculate date range for filtering
+  // ===== HELPER FUNCTIONS =====
+  
+  /**
+   * Calculate date range for filtering based on selected dateRange option
+   * Converts predefined date ranges (today, week, month, etc.) into actual start/end dates
+   * Returns ISO date strings that can be used for database queries
+   */
   const getDateRange = () => {
     const now = new Date()
     let startDate: string | undefined
@@ -59,151 +88,203 @@ export default function Finances() {
 
     switch (dateRange) {
       case 'today':
+        // Set both start and end to today's date
         startDate = endDate = now.toISOString().split('T')[0]
         break
       case 'week':
+        // Calculate start of current week (Sunday) and set end to today
         const weekStart = new Date(now)
-        weekStart.setDate(now.getDate() - now.getDay())
+        weekStart.setDate(now.getDate() - now.getDay()) // Go back to Sunday
         startDate = weekStart.toISOString().split('T')[0]
         endDate = now.toISOString().split('T')[0]
         break
       case 'month':
+        // Set to first day of current month and last day of current month
         startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
         endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
         break
       case 'quarter':
+        // Calculate current quarter (Q1: Jan-Mar, Q2: Apr-Jun, etc.)
         const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
         startDate = quarterStart.toISOString().split('T')[0]
         endDate = new Date(quarterStart.getFullYear(), quarterStart.getMonth() + 3, 0).toISOString().split('T')[0]
         break
       case 'year':
+        // Set to January 1st and December 31st of current year
         startDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0]
         endDate = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0]
         break
       case 'custom':
+        // Use user-provided custom dates
         startDate = customStartDate || undefined
         endDate = customEndDate || undefined
         break
       default:
+        // 'all' case - no date filtering
         startDate = endDate = undefined
     }
 
     return { startDate, endDate }
   }
 
+  // Get calculated date range for current filter settings
   const { startDate, endDate } = getDateRange()
 
+  // ===== DATA FETCHING =====
+  
+  /**
+   * useTransactions hook - Fetches and manages transaction data
+   * Provides transactions, loading states, statistics, and filter functions
+   * Automatically refetches when parameters change
+   */
   const {
-    transactions,
-    isLoading,
-    error,
-    monthlyStats,
-    categories,
-    setSearch,
-    setType,
-    setDateRange: setHookDateRange,
-    refresh
+    transactions, // Array of transaction objects
+    isLoading, // Boolean indicating if data is being fetched
+    error, // Error message if fetch fails
+    monthlyStats, // Financial statistics for current and previous month
+    categories, // Category breakdown with amounts and percentages
+    setSearch, // Function to update search filter in the hook
+    setType, // Function to update transaction type filter in the hook
+    setDateRange: setHookDateRange, // Function to update date range filter in the hook
+    refresh // Function to manually refresh data
   } = useTransactions({ 
-    pageSize: 100,
-    type: transactionType,
-    startDate,
-    endDate
+    pageSize: 100, // Number of transactions to fetch per page
+    type: transactionType, // Current transaction type filter
+    startDate, // Calculated start date for filtering
+    endDate // Calculated end date for filtering
   })
 
-  // Update hook when filters change
+  // ===== EFFECT HOOKS =====
+  
+  /**
+   * Update the useTransactions hook whenever local filter state changes
+   * This ensures the hook's internal state stays in sync with component state
+   */
   useEffect(() => {
-    setSearch(searchQuery)
-    setType(transactionType)
-    setHookDateRange(startDate, endDate)
+    setSearch(searchQuery) // Update search filter in hook
+    setType(transactionType) // Update transaction type filter in hook
+    setHookDateRange(startDate, endDate) // Update date range filter in hook
   }, [searchQuery, transactionType, startDate, endDate, setSearch, setType, setHookDateRange])
 
+  // ===== EVENT HANDLERS =====
+  
+  /**
+   * Handle search input changes
+   * Updates both local state and the hook's search filter
+   */
   const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    setSearch(value)
+    setSearchQuery(value) // Update local search state
+    setSearch(value) // Update hook's search filter
   }
 
-  // Get unique categories and projects for filter options
+  // ===== COMPUTED VALUES =====
+  
+  /**
+   * Extract unique categories from transactions for filter options
+   * Uses useMemo for performance - only recalculates when transactions change
+   */
   const availableCategories = useMemo(() => {
-    const cats = new Set(transactions.map(t => t.category))
-    return Array.from(cats).sort()
+    const cats = new Set(transactions.map(t => t.category)) // Get unique categories
+    return Array.from(cats).sort() // Convert to sorted array
   }, [transactions])
 
+  /**
+   * Extract unique project names from transactions for filter options
+   * Only includes transactions that have an associated project
+   */
   const availableProjects = useMemo(() => {
     const projects = new Set(
       transactions
-        .filter(t => t.project?.name)
-        .map(t => t.project!.name)
+        .filter(t => t.project?.name) // Only transactions with projects
+        .map(t => t.project!.name) // Extract project names
     )
-    return Array.from(projects).sort()
+    return Array.from(projects).sort() // Convert to sorted array
   }, [transactions])
 
-  // Filter and sort transactions
+  /**
+   * Apply client-side filtering and sorting to transactions
+   * This handles filters that aren't handled by the database query
+   */
   const filteredAndSortedTransactions = useMemo(() => {
     let filtered = transactions
 
-    // Apply category filter
+    // Apply category filter - only show transactions in selected categories
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(t => selectedCategories.includes(t.category))
     }
 
-    // Apply project filter
+    // Apply project filter - only show transactions for selected projects
     if (selectedProjects.length > 0) {
       filtered = filtered.filter(t => 
         t.project?.name && selectedProjects.includes(t.project.name)
       )
     }
 
-    // Sort transactions
+    // Sort transactions based on selected field and direction
     filtered.sort((a, b) => {
       let aValue: any, bValue: any
 
+      // Determine values to compare based on sort field
       switch (sortField) {
         case 'date':
           aValue = new Date(a.transaction_date)
           bValue = new Date(b.transaction_date)
           break
         case 'amount':
-          aValue = Math.abs(Number(a.amount))
+          aValue = Math.abs(Number(a.amount)) // Use absolute value for sorting
           bValue = Math.abs(Number(b.amount))
           break
         case 'description':
-          aValue = a.description.toLowerCase()
+          aValue = a.description.toLowerCase() // Case-insensitive sorting
           bValue = b.description.toLowerCase()
           break
         case 'category':
-          aValue = a.category.toLowerCase()
+          aValue = a.category.toLowerCase() // Case-insensitive sorting
           bValue = b.category.toLowerCase()
           break
         default:
-          return 0
+          return 0 // No sorting
       }
 
+      // Apply sort direction
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
-      return 0
+      return 0 // Values are equal
     })
 
     return filtered
   }, [transactions, selectedCategories, selectedProjects, sortField, sortDirection])
 
+  /**
+   * Handle sorting - either change direction if same field, or set new field
+   */
   const handleSort = (field: SortField) => {
     if (sortField === field) {
+      // Same field clicked - toggle direction
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
+      // New field clicked - set field and default to descending
       setSortField(field)
       setSortDirection('desc')
     }
   }
 
+  /**
+   * Clear all active filters and reset to default state
+   */
   const clearFilters = () => {
-    setSelectedCategories([])
-    setSelectedProjects([])
-    setTransactionType('all')
-    setDateRange('month')
-    setSearchQuery('')
-    setSearch('')
+    setSelectedCategories([]) // Clear category filters
+    setSelectedProjects([]) // Clear project filters
+    setTransactionType('all') // Reset to show all transaction types
+    setDateRange('month') // Reset to current month
+    setSearchQuery('') // Clear search query
+    setSearch('') // Clear search in hook
   }
 
+  /**
+   * Count active filters for display in UI
+   * Helps users understand how many filters are currently applied
+   */
   const activeFiltersCount = selectedCategories.length + selectedProjects.length + 
     (transactionType !== 'all' ? 1 : 0) + (dateRange !== 'month' ? 1 : 0)
 
