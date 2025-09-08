@@ -6,6 +6,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "@/components/ui/toaster"
 import { DevModeToast } from "@/components/dev-mode-toast"
+import { ThemeProvider } from "@/components/theme-provider"
 
 import {NextIntlClientProvider, hasLocale} from 'next-intl';
 import {notFound} from 'next/navigation';
@@ -34,17 +35,24 @@ export default async function RootLayout({
   }
   console.log('Locale:', locale);
   return (
-    <html lang="{locale}">
+    <html lang="{locale}" suppressHydrationWarning>
       <body className={inter.className}>
-        <NextIntlClientProvider>
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full">
-            <main className="flex-1 overflow-hidden">{children}</main>
-          </div>
-          <Toaster />
-          {/* <DevModeToast /> */}
-        </SidebarProvider>
-        </NextIntlClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NextIntlClientProvider>
+          <SidebarProvider>
+            <div className="flex min-h-screen w-full">
+              <main className="flex-1 overflow-hidden">{children}</main>
+            </div>
+            <Toaster />
+            {/* <DevModeToast /> */}
+          </SidebarProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
