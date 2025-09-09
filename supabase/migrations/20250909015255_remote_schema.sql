@@ -408,8 +408,7 @@ ALTER TABLE "public"."documents" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."employees" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid",
+    "id" "uuid" NOT NULL,
     "company_id" "uuid",
     "employee_number" character varying(50),
     "hire_date" "date" NOT NULL,
@@ -427,7 +426,9 @@ CREATE TABLE IF NOT EXISTS "public"."employees" (
     "is_active" boolean DEFAULT true,
     "created_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     "updated_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "employees_pay_type_check" CHECK ((("pay_type")::"text" = ANY ((ARRAY['hourly'::character varying, 'salary'::character varying, 'contract'::character varying])::"text"[])))
+    "role" character varying DEFAULT 'employee'::character varying,
+    CONSTRAINT "employees_pay_type_check" CHECK ((("pay_type")::"text" = ANY ((ARRAY['hourly'::character varying, 'salary'::character varying, 'contract'::character varying])::"text"[]))),
+    CONSTRAINT "employees_role_check" CHECK ((("role")::"text" = ANY (ARRAY['admin'::"text", 'manager'::"text", 'employee'::"text", 'client'::"text"])))
 );
 
 
@@ -555,20 +556,6 @@ CREATE TABLE IF NOT EXISTS "public"."payroll" (
 
 
 ALTER TABLE "public"."payroll" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."projects" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "company_id" "uuid",
-    "name" character varying(255) NOT NULL,
-    "description" "text",
-    "status" character varying(20) DEFAULT 'planning'::character varying,
-    "created_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
-ALTER TABLE "public"."projects" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."projects_new" (
@@ -779,11 +766,6 @@ ALTER TABLE ONLY "public"."projects_new"
 
 
 
-ALTER TABLE ONLY "public"."projects"
-    ADD CONSTRAINT "projects_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."suppliers"
     ADD CONSTRAINT "suppliers_pkey" PRIMARY KEY ("id");
 
@@ -843,10 +825,6 @@ CREATE INDEX "idx_documents_project" ON "public"."documents" USING "btree" ("pro
 
 
 CREATE INDEX "idx_employees_company_id" ON "public"."employees" USING "btree" ("company_id");
-
-
-
-CREATE INDEX "idx_employees_user_id" ON "public"."employees" USING "btree" ("user_id");
 
 
 
@@ -962,10 +940,6 @@ CREATE OR REPLACE TRIGGER "update_projects_new_updated_at" BEFORE UPDATE ON "pub
 
 
 
-CREATE OR REPLACE TRIGGER "update_projects_updated_at" BEFORE UPDATE ON "public"."projects" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
-
-
-
 CREATE OR REPLACE TRIGGER "update_suppliers_updated_at" BEFORE UPDATE ON "public"."suppliers" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
 
@@ -1043,7 +1017,7 @@ ALTER TABLE ONLY "public"."employees"
 
 
 ALTER TABLE ONLY "public"."employees"
-    ADD CONSTRAINT "employees_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+    ADD CONSTRAINT "employees_id_fkey" FOREIGN KEY ("id") REFERENCES "public"."users"("id");
 
 
 
@@ -1107,11 +1081,6 @@ ALTER TABLE ONLY "public"."payroll"
 
 
 
-ALTER TABLE ONLY "public"."projects"
-    ADD CONSTRAINT "projects_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id");
-
-
-
 ALTER TABLE ONLY "public"."projects_new"
     ADD CONSTRAINT "projects_new_client_id_fkey" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id");
 
@@ -1133,7 +1102,7 @@ ALTER TABLE ONLY "public"."suppliers"
 
 
 ALTER TABLE ONLY "public"."tasks"
-    ADD CONSTRAINT "tasks_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "public"."employees"("id");
+    ADD CONSTRAINT "tasks_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "public"."users"("id");
 
 
 
@@ -1153,7 +1122,7 @@ ALTER TABLE ONLY "public"."time_tracking"
 
 
 ALTER TABLE ONLY "public"."time_tracking"
-    ADD CONSTRAINT "time_tracking_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id");
+    ADD CONSTRAINT "time_tracking_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects_new"("id");
 
 
 
@@ -1207,10 +1176,6 @@ CREATE POLICY "Managers and admins can manage equipment" ON "public"."equipment"
 
 
 
-CREATE POLICY "Managers and admins can manage legacy projects" ON "public"."projects" TO "authenticated" USING ((("company_id" = ANY ("public"."get_user_company_ids"())) AND "public"."is_admin_or_manager"())) WITH CHECK ((("company_id" = ANY ("public"."get_user_company_ids"())) AND "public"."is_admin_or_manager"()));
-
-
-
 CREATE POLICY "Managers and admins can manage material usage" ON "public"."material_usage" TO "authenticated" USING ((("project_id" IN ( SELECT "projects_new"."id"
    FROM "public"."projects_new"
   WHERE ("projects_new"."company_id" = ANY ("public"."get_user_company_ids"())))) AND "public"."is_admin_or_manager"())) WITH CHECK ((("project_id" IN ( SELECT "projects_new"."id"
@@ -1239,12 +1204,6 @@ CREATE POLICY "Managers and admins can manage tasks" ON "public"."tasks" TO "aut
 
 
 
-CREATE POLICY "Managers can view company time entries" ON "public"."time_tracking" FOR SELECT TO "authenticated" USING ((("employee_id" IN ( SELECT "employees"."id"
-   FROM "public"."employees"
-  WHERE ("employees"."company_id" = ANY ("public"."get_user_company_ids"())))) AND "public"."is_admin_or_manager"()));
-
-
-
 CREATE POLICY "Only admins can create users" ON "public"."users" FOR INSERT TO "authenticated" WITH CHECK ("public"."is_admin"());
 
 
@@ -1254,14 +1213,6 @@ CREATE POLICY "Only admins can delete users" ON "public"."users" FOR DELETE TO "
 
 
 CREATE POLICY "Only admins can manage companies" ON "public"."companies" TO "authenticated" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
-
-
-
-CREATE POLICY "Only admins can manage payroll" ON "public"."payroll" TO "authenticated" USING ((("employee_id" IN ( SELECT "employees"."id"
-   FROM "public"."employees"
-  WHERE ("employees"."company_id" = ANY ("public"."get_user_company_ids"())))) AND "public"."is_admin"())) WITH CHECK ((("employee_id" IN ( SELECT "employees"."id"
-   FROM "public"."employees"
-  WHERE ("employees"."company_id" = ANY ("public"."get_user_company_ids"())))) AND "public"."is_admin"()));
 
 
 
@@ -1277,7 +1228,7 @@ CREATE POLICY "Users can update assigned tasks" ON "public"."tasks" FOR UPDATE T
 
 
 
-CREATE POLICY "Users can update own employee record" ON "public"."employees" FOR UPDATE TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) AND ("company_id" = ANY ("public"."get_user_company_ids"()))));
+CREATE POLICY "Users can update own employee record" ON "public"."employees" FOR UPDATE TO "authenticated" USING (("id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK ((("id" = ( SELECT "auth"."uid"() AS "uid")) AND ("company_id" = ANY ("public"."get_user_company_ids"()))));
 
 
 
@@ -1347,11 +1298,7 @@ CREATE POLICY "Users can view company tasks" ON "public"."tasks" FOR SELECT TO "
 
 
 
-CREATE POLICY "Users can view legacy company projects" ON "public"."projects" FOR SELECT TO "authenticated" USING (("company_id" = ANY ("public"."get_user_company_ids"())));
-
-
-
-CREATE POLICY "Users can view own employee record" ON "public"."employees" FOR SELECT TO "authenticated" USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
+CREATE POLICY "Users can view own employee record" ON "public"."employees" FOR SELECT TO "authenticated" USING (("id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -1407,9 +1354,6 @@ ALTER TABLE "public"."materials" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."payroll" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."projects" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."projects_new" ENABLE ROW LEVEL SECURITY;
@@ -1724,12 +1668,6 @@ GRANT ALL ON TABLE "public"."materials" TO "service_role";
 GRANT ALL ON TABLE "public"."payroll" TO "anon";
 GRANT ALL ON TABLE "public"."payroll" TO "authenticated";
 GRANT ALL ON TABLE "public"."payroll" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."projects" TO "anon";
-GRANT ALL ON TABLE "public"."projects" TO "authenticated";
-GRANT ALL ON TABLE "public"."projects" TO "service_role";
 
 
 

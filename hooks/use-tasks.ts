@@ -121,7 +121,7 @@ export function useTasks(initial?: UseTasksOptions): UseTasksResult {
           ? supabase.from("projects_new").select("id,name,project_number").in("id", projectIds)
           : Promise.resolve({ data: [], error: null }),
         employeeIds.length > 0
-          ? supabase.from("employees").select("id,user_id,users(id,first_name,last_name)").in("id", employeeIds)
+          ? supabase.from("users").select("*").in("id", employeeIds)
           : Promise.resolve({ data: [], error: null })
       ])
 
