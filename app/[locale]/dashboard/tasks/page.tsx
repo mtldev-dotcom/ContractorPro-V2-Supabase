@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Search, Plus, Filter, Calendar, User, AlertCircle, CheckCircle2, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,167 +9,158 @@ import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AddTaskModal } from "@/components/add-task-modal"
+import { EditTaskModal } from "@/components/edit-task-modal"
+import { useTasks } from "@/hooks/use-tasks"
+import { TASK_STATUSES, formatStatusLabel, getPriorityBadgeVariant, getStatusBadgeVariant, formatAssigneeName, type TaskStatus } from "@/lib/tasks"
+import { useTranslations } from "next-intl"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Tasks() {
+  const t = useTranslations("tasks")
+  const { toast } = useToast()
+
+  // Hook-driven data (search/status/pagination handled inside)
+  const { tasks, isLoading, error, total, page, pageSize, setSearch, setStatus, setPage, refresh } = useTasks({
+    pageSize: 12,
+    status: "all",
+  })
+
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all")
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const tasks = [
-    {
-      id: 1,
-      title: "Install kitchen cabinets",
-      description: "Mount upper and lower cabinets in kitchen renovation",
-      project: "Maple Street Kitchen",
-      assignee: "Sarah Thompson",
-      priority: "High",
-      status: "In Progress",
-      dueDate: "2024-02-20",
-      completed: false,
-      estimatedHours: 8,
-    },
-    {
-      id: 2,
-      title: "Electrical rough-in inspection",
-      description: "Schedule and coordinate electrical inspection",
-      project: "Pine Street Addition",
-      assignee: "Mike Rodriguez",
-      priority: "High",
-      status: "Pending",
-      dueDate: "2024-02-18",
-      completed: false,
-      estimatedHours: 2,
-    },
-    {
-      id: 3,
-      title: "Tile bathroom floor",
-      description: "Install ceramic tile flooring in master bathroom",
-      project: "Oak Avenue Bathroom",
-      assignee: "Robert Kim",
-      priority: "Medium",
-      status: "In Progress",
-      dueDate: "2024-02-22",
-      completed: false,
-      estimatedHours: 12,
-    },
-    {
-      id: 4,
-      title: "Paint interior walls",
-      description: "Prime and paint all interior walls with agreed colors",
-      project: "Maple Street Kitchen",
-      assignee: "Jennifer Adams",
-      priority: "Low",
-      status: "Not Started",
-      dueDate: "2024-02-25",
-      completed: false,
-      estimatedHours: 16,
-    },
-    {
-      id: 5,
-      title: "Install deck railing",
-      description: "Install composite railing system around deck perimeter",
-      project: "Elm Drive Deck",
-      assignee: "David Wilson",
-      priority: "Medium",
-      status: "In Progress",
-      dueDate: "2024-02-21",
-      completed: false,
-      estimatedHours: 6,
-    },
-    {
-      id: 6,
-      title: "Plumbing final connections",
-      description: "Connect all fixtures and test water pressure",
-      project: "Oak Avenue Bathroom",
-      assignee: "Lisa Chen",
-      priority: "High",
-      status: "Completed",
-      dueDate: "2024-02-15",
-      completed: true,
-      estimatedHours: 4,
-    },
-    {
-      id: 7,
-      title: "HVAC ductwork installation",
-      description: "Install ductwork for new addition heating/cooling",
-      project: "Pine Street Addition",
-      assignee: "Amanda Foster",
-      priority: "High",
-      status: "In Progress",
-      dueDate: "2024-02-19",
-      completed: false,
-      estimatedHours: 10,
-    },
-    {
-      id: 8,
-      title: "Final cleanup and walkthrough",
-      description: "Complete final cleanup and client walkthrough",
-      project: "Oak Avenue Bathroom",
-      assignee: "John Martinez",
-      priority: "Medium",
-      status: "Scheduled",
-      dueDate: "2024-02-28",
-      completed: false,
-      estimatedHours: 3,
-    },
-  ]
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "High":
-        return "destructive"
-      case "Medium":
-        return "default"
-      case "Low":
-        return "secondary"
-      default:
-        return "default"
-    }
+  // Bind local search input to shared hook's search
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    setSearch(value)
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Completed":
-        return "secondary"
-      case "In Progress":
-        return "default"
-      case "Pending":
-        return "outline"
-      case "Not Started":
-        return "outline"
-      case "Scheduled":
-        return "secondary"
-      default:
-        return "default"
+  // Listen for create / update events emitted by modals and refresh the list
+  useEffect(() => {
+    const onCreated = () => refresh()
+    const onUpdated = () => refresh()
+    window.addEventListener("task:created", onCreated as EventListener)
+    window.addEventListener("task:updated", onUpdated as EventListener)
+    return () => {
+      window.removeEventListener("task:created", onCreated as EventListener)
+      window.removeEventListener("task:updated", onUpdated as EventListener)
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Derived counts (client-side)
+  const completedTasks = tasks.filter((t) => t.completed).length
+  const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length
+  const overdueTasks = tasks.filter((t) => t.due_date && new Date(t.due_date) < new Date() && !t.completed).length
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Completed":
+      case "completed":
         return CheckCircle2
-      case "In Progress":
+      case "in_progress":
         return Clock
-      case "Pending":
+      case "pending":
+      case "not_started":
         return AlertCircle
-      case "Not Started":
-        return AlertCircle
-      case "Scheduled":
+      case "scheduled":
         return Calendar
       default:
         return Clock
     }
   }
 
-  const filteredTasks = tasks.filter(
-    (task) =>
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.project.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.assignee.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const handleEditClick = (taskId: string) => {
+    setSelectedTaskId(taskId)
+    setShowEditModal(true)
+  }
 
-  const completedTasks = tasks.filter((task) => task.completed).length
-  const inProgressTasks = tasks.filter((task) => task.status === "In Progress").length
-  const overdueTasks = tasks.filter((task) => new Date(task.dueDate) < new Date() && !task.completed).length
+  const handleDeleteClick = (taskId: string, taskTitle: string) => {
+    // simple confirmation
+    if (!confirm(t("confirmDelete", { title: taskTitle }))) return
+    deleteTask(taskId, taskTitle)
+  }
+
+  const deleteTask = async (taskId: string, taskTitle: string) => {
+    try {
+      setIsDeleting(true)
+      const base = typeof window !== "undefined" ? window.location.origin : ""
+      const res = await fetch(`${base}/api/tasks/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        throw new Error(data?.error || "Failed to delete task")
+      }
+      toast({
+        title: t("taskDeleted"),
+        description: t("taskDeletedDesc", { title: taskTitle }),
+      })
+      refresh()
+    } catch (err: any) {
+      toast({
+        title: t("error"),
+        description: err.message || t("failedToDelete"),
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <header className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+            <h1 className="text-2xl font-bold">{t("title")}</h1>
+          </div>
+        </header>
+        <div className="flex-1 p-4">
+          <div className="space-y-4">
+            <div className="h-8 w-64 bg-muted rounded animate-pulse" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="h-24 bg-muted rounded animate-pulse" />
+              <div className="h-24 bg-muted rounded animate-pulse" />
+              <div className="h-24 bg-muted rounded animate-pulse" />
+              <div className="h-24 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <header className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+            <h1 className="text-2xl font-bold">{t("title")}</h1>
+          </div>
+        </header>
+        <div className="flex-1 p-4">
+          <div className="max-w-md mx-auto mt-8">
+            <p className="font-medium text-destructive">{t("errorLoading")}</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <div className="mt-4">
+              <Button onClick={() => refresh()} variant="outline" size="sm">
+                {t("tryAgain")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -177,26 +168,43 @@ export default function Tasks() {
       <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          <h1 className="text-2xl font-bold">Tasks</h1>
-          <p className="text-sm text-red-500 font-bold italic">A Reminder to developers: this page is a work in progress. The data is not yet connected to the projects table.</p>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search tasks..."
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 w-64"
             />
           </div>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                const v = (e.target.value as TaskStatus | "all") || "all"
+                setStatusFilter(v)
+                setStatus(v)
+                setPage(1)
+              }}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value="all">{t("allStatuses")}</option>
+              {TASK_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {formatStatusLabel(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Task
+            {t("newTask")}
           </Button>
         </div>
       </header>
@@ -206,26 +214,26 @@ export default function Tasks() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{tasks.length}</div>
-              <p className="text-sm text-muted-foreground">Total Tasks</p>
+              <div className="text-2xl font-bold">{total}</div>
+              <p className="text-sm text-muted-foreground">{t("totalTasks")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">{inProgressTasks}</div>
-              <p className="text-sm text-muted-foreground">In Progress</p>
+              <p className="text-sm text-muted-foreground">{t("inProgress")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">{completedTasks}</div>
-              <p className="text-sm text-muted-foreground">Completed</p>
+              <p className="text-sm text-muted-foreground">{t("completed")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-red-600">{overdueTasks}</div>
-              <p className="text-sm text-muted-foreground">Overdue</p>
+              <p className="text-sm text-muted-foreground">{t("overdue")}</p>
             </CardContent>
           </Card>
         </div>
@@ -233,14 +241,14 @@ export default function Tasks() {
         {/* Task List */}
         <Card>
           <CardHeader>
-            <CardTitle>All Tasks</CardTitle>
-            <CardDescription>Manage and track project tasks</CardDescription>
+            <CardTitle>{t("allTasks")}</CardTitle>
+            <CardDescription>{t("manageAndTrack")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredTasks.map((task) => {
+              {tasks.map((task) => {
                 const StatusIcon = getStatusIcon(task.status)
-                const isOverdue = new Date(task.dueDate) < new Date() && !task.completed
+                const isOverdue = task.due_date ? new Date(task.due_date) < new Date() && !task.completed : false
 
                 return (
                   <div
@@ -259,10 +267,10 @@ export default function Tasks() {
                             <p className="text-sm text-muted-foreground">{task.description}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                            <Badge variant={getStatusColor(task.status)} className="flex items-center gap-1">
+                            <Badge variant={getPriorityBadgeVariant(task.priority)}>{task.priority}</Badge>
+                            <Badge variant={getStatusBadgeVariant(task.status)} className="flex items-center gap-1 capitalize">
                               <StatusIcon className="h-3 w-3" />
-                              {task.status}
+                              {formatStatusLabel(task.status)}
                             </Badge>
                           </div>
                         </div>
@@ -270,29 +278,29 @@ export default function Tasks() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            {task.assignee}
+                            {formatAssigneeName(task.assignee)}
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            Due: {new Date(task.dueDate).toLocaleDateString()}
-                            {isOverdue && <span className="text-red-600 font-medium ml-1">(Overdue)</span>}
+                            {task.due_date ? new Date(task.due_date).toLocaleDateString() : t("notSet")}
+                            {isOverdue && <span className="text-red-600 font-medium ml-1">({t("overdue")})</span>}
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {task.estimatedHours}h estimated
+                            {task.estimated_hours ?? 0}h {t("estimated")}
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-muted-foreground">
-                            Project: <span className="font-medium">{task.project}</span>
+                            {t("project")}: <span className="font-medium">{task.project?.name ?? t("noProject")}</span>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              Edit
+                            <Button size="sm" variant="outline" onClick={() => handleEditClick(task.id)}>
+                              {t("edit")}
                             </Button>
-                            <Button size="sm" variant="outline">
-                              View
+                            <Button size="sm" variant="outline" onClick={() => handleDeleteClick(task.id, task.title)}>
+                              {t("delete")}
                             </Button>
                           </div>
                         </div>
@@ -307,6 +315,22 @@ export default function Tasks() {
       </div>
 
       <AddTaskModal open={showAddModal} onOpenChange={setShowAddModal} />
+      <EditTaskModal open={showEditModal} onOpenChange={setShowEditModal} taskId={selectedTaskId} />
+
+      {/* Pagination (simple) */}
+      {total > pageSize && (
+        <div className="flex justify-center py-6">
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>
+              {t("prev")}
+            </Button>
+            <div className="px-4">{t("pageX", { page })}</div>
+            <Button onClick={() => setPage(page + 1)} disabled={page * pageSize >= total}>
+              {t("next")}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
