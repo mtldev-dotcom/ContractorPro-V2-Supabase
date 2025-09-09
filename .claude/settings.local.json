@@ -5,7 +5,8 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npx supabase:*)"
     ],
     "deny": [],
     "ask": []

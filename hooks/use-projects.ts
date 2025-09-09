@@ -59,20 +59,12 @@ export function useProjects(initial?: UseProjectsOptions): UseProjectsResult {
         throw new Error('Authentication required to view projects')
       }
 
-      // Build base query with joins
+      // Build base query - fetch projects first, then manually join
       let query = supabase
         .from('projects_new')
         .select(`
           *,
-          client:clients(first_name, last_name, company_name),
-          project_manager:employees(
-            id,
-            user_id,
-            users (
-              first_name,
-              last_name
-            )
-          )
+          client:clients(first_name, last_name, company_name)
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
 
@@ -98,9 +90,61 @@ export function useProjects(initial?: UseProjectsOptions): UseProjectsResult {
 
       if (error) throw error
 
-      const valid = (data as Project[] | null) ?? []
-      setProjects(valid)
-      setTotal(count ?? valid.length)
+      let projects = (data as Project[] | null) ?? []
+
+      // Manually fetch project manager information to avoid FK ambiguity
+      if (projects.length > 0) {
+        const projectManagerIds = projects
+          .map(p => p.project_manager_id)
+          .filter((id): id is string => !!id)
+
+        if (projectManagerIds.length > 0) {
+          // Fetch employees and users separately to avoid FK ambiguity
+          const [employeesResult, usersResult] = await Promise.all([
+            supabase
+              .from('employees')
+              .select('id, user_id')
+              .in('id', projectManagerIds),
+            supabase
+              .from('users')
+              .select('id, first_name, last_name')
+          ])
+
+          const employees = employeesResult.data || []
+          const users = usersResult.data || []
+
+          // Create user lookup
+          const userMap = new Map()
+          users.forEach(user => userMap.set(user.id, user))
+
+          // Create a lookup map for project managers
+          const managerLookup = new Map()
+          employees.forEach(emp => {
+            const user = userMap.get(emp.user_id)
+            if (user) {
+              managerLookup.set(emp.id, {
+                id: emp.id,
+                user_id: emp.user_id,
+                users: {
+                  first_name: user.first_name,
+                  last_name: user.last_name
+                }
+              })
+            }
+          })
+
+          // Attach project manager data to projects
+          projects = projects.map(project => ({
+            ...project,
+            project_manager: project.project_manager_id 
+              ? managerLookup.get(project.project_manager_id) || null
+              : null
+          }))
+        }
+      }
+
+      setProjects(projects)
+      setTotal(count ?? projects.length)
     } catch (err: any) {
       setError(err.message || 'Failed to load projects')
     } finally {

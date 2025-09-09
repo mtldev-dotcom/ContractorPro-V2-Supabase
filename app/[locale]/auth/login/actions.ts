@@ -117,20 +117,47 @@ export async function signup(formData: FormData) {
   const supabase = await createClient()
   const locale = await getLocaleFromHeaders()
   
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  // Validate input
+  if (!email || !password) {
+    redirect(`/${locale}/error?message=Email and password are required`)
+    return
+  }
+  
+  if (password.length < 6) {
+    redirect(`/${locale}/error?message=Password must be at least 6 characters`)
+    return
+  }
+  
+  const { data, error } = await supabase.auth.signUp({ 
+    email, 
+    password
+  })
   
   if (error) {
-    redirect(`/${locale}/error`)
+    console.error('Signup error:', error)
+    redirect(`/${locale}/error?message=${encodeURIComponent(error.message)}`)
     return
   }
   
   if (data.user) {
     // Ensure user exists in database with admin role
-    await ensureUserInDatabase(data.user.id, data.user.email || email)
+    const userCreated = await ensureUserInDatabase(data.user.id, data.user.email || email)
     
-    // New users always need onboarding
-    redirect(`/${locale}/onboarding`)
-    return
+    if (!userCreated) {
+      console.error('Failed to create user in database')
+      // Continue anyway - the trigger should handle user creation
+    }
+    
+    // If user is confirmed immediately (no email verification), redirect to onboarding
+    if (data.user.email_confirmed_at) {
+      // User confirmed, redirect to onboarding
+      redirect(`/${locale}/onboarding`)
+      return
+    } else {
+      // If email confirmation is required, show success message
+      redirect(`/${locale}/error?message=Account created! Please check your email and click the confirmation link to complete signup.`)
+      return
+    }
   }
   
   redirect(`/${locale}/dashboard`)
