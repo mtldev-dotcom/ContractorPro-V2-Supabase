@@ -1,35 +1,46 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Plus, Filter, MoreHorizontal, MapPin, Calendar, User } from "lucide-react"
+import React, { useState } from "react"
+import { Search, Plus, Filter, MoreHorizontal, MapPin, Calendar, User, Grid3X3, List, SortAsc, SortDesc, TrendingUp, AlertTriangle, Clock, DollarSign } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Separator } from "@/components/ui/separator"
 import { AddProjectModal } from "@/components/add-project-modal"
 import { EditProjectModal } from '@/components/edit-project-modal';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getStatusBadgeVariant, formatStatusLabel, PROJECT_STATUSES, type Project, type ProjectStatus } from '@/lib/projects'
 import { useProjects } from '@/hooks/use-projects'
+import { useProjectStats } from '@/hooks/use-project-stats'
 import { useTranslations } from 'next-intl'
+
+type SortOption = 'name' | 'created_at' | 'estimated_end_date' | 'budget' | 'status'
+type ViewMode = 'grid' | 'list'
 
 export default function Projects() {
   const { toast } = useToast();
   const t = useTranslations("projects");
+  
+  // Project stats hook
+  const { stats, isLoading: statsLoading } = useProjectStats()
+  
   // Search, status filter, pagination are managed by useProjects
   const { projects, isLoading, error, total, page, pageSize, setSearch, setStatus, setPage, refresh } = useProjects({
     pageSize: 12,
     status: 'all',
   })
+  
+  // UI State
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false);
@@ -38,12 +49,46 @@ export default function Projects() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [sortBy, setSortBy] = useState<SortOption>('created_at')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   // Bind local search input to shared hook's search
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     setSearch(value)
   }
+
+  // Handle sorting
+  const handleSort = (field: SortOption) => {
+    if (sortBy === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortDirection('desc')
+    }
+  }
+
+  // Sort projects
+  const sortedProjects = [...projects].sort((a, b) => {
+    let aValue: any = a[sortBy as keyof Project]
+    let bValue: any = b[sortBy as keyof Project]
+    
+    if (sortBy === 'name') {
+      aValue = a.name?.toLowerCase() || ''
+      bValue = b.name?.toLowerCase() || ''
+    } else if (sortBy === 'budget') {
+      aValue = a.budget || 0
+      bValue = b.budget || 0
+    } else if (sortBy === 'created_at' || sortBy === 'estimated_end_date') {
+      aValue = aValue ? new Date(aValue).getTime() : 0
+      bValue = bValue ? new Date(bValue).getTime() : 0
+    }
+    
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+    return 0
+  })
 
   // Show loading state
   if (isLoading) {
@@ -126,7 +171,7 @@ export default function Projects() {
 
   const getStatusColor = (status: Project['status']) => getStatusBadgeVariant(status)
 
-  const filteredProjects = projects // server-side filter/search handled in hook (kept for compatibility)
+  const filteredProjects = sortedProjects // Use sorted projects
 
   const handleEditClick = (projectId: string) => {
     setSelectedProjectId(projectId);
@@ -169,7 +214,7 @@ export default function Projects() {
 
   // Permanently delete a project and its dependent data
   const confirmDeleteProject = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget) return;
     try {
       setIsDeleting(true)
       const base = typeof window !== 'undefined' ? window.location.origin : ''
@@ -204,23 +249,38 @@ export default function Projects() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger />
-          <h1 className="text-2xl font-bold">{t("title")}</h1>
+      {/* Enhanced Header */}
+      <header className="flex flex-col gap-4 p-6 border-b bg-gradient-to-r from-background via-background to-muted/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                {t("title")}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                {t("subtitle", { count: total })}
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setShowAddModal(true)} size="lg" className="shadow-lg">
+            <Plus className="h-4 w-4 mr-2" />
+            {t("newProject")}
+          </Button>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="relative hidden md:block">
+        
+        {/* Filters and Controls */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 w-64"
+              className="pl-10"
             />
           </div>
-          {/* Status Filter */}
+          
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4" />
             <Select
@@ -242,55 +302,160 @@ export default function Projects() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t("newProject")}
-          </Button>
+
+          {/* Sort Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                {sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                {t("sort")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => handleSort('name')}>
+                <span className="flex-1">{t("sortByName")}</span>
+                {sortBy === 'name' && (sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />)}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('created_at')}>
+                <span className="flex-1">{t("sortByDate")}</span>
+                {sortBy === 'created_at' && (sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />)}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('estimated_end_date')}>
+                <span className="flex-1">{t("sortByDueDate")}</span>
+                {sortBy === 'estimated_end_date' && (sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />)}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('budget')}>
+                <span className="flex-1">{t("sortByBudget")}</span>
+                {sortBy === 'budget' && (sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />)}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('status')}>
+                <span className="flex-1">{t("sortByStatus")}</span>
+                {sortBy === 'status' && (sortDirection === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />)}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* View Mode Toggle */}
+          <div className="flex rounded-lg border">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="rounded-r-none"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="rounded-l-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
       <div className="flex-1 p-4">
-        {/* Project Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">8</div>
-              <p className="text-sm text-muted-foreground">{t("activeProjects")}</p>
+        {/* Enhanced Project Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="relative overflow-hidden hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {statsLoading ? <Skeleton className="h-8 w-8" /> : stats.activeProjects}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{t("activeProjects")}</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <TrendingUp className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-blue-600">
+                <span>{t("total")}: {statsLoading ? "..." : stats.totalProjects}</span>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">$233K</div>
-              <p className="text-sm text-muted-foreground">{t("totalBudget")}</p>
+
+          <Card className="relative overflow-hidden hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {statsLoading ? <Skeleton className="h-8 w-16" /> : `$${Math.round(stats.totalBudget / 1000)}K`}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{t("totalBudget")}</p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <DollarSign className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-green-600">
+                <span>{t("spent")}: {statsLoading ? "..." : `$${Math.round(stats.totalSpent / 1000)}K`}</span>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">$107K</div>
-              <p className="text-sm text-muted-foreground">{t("totalSpent")}</p>
+
+          <Card className="relative overflow-hidden hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {statsLoading ? <Skeleton className="h-8 w-8" /> : stats.overdueProjects}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{t("overdueProjects")}</p>
+                </div>
+                <div className="p-3 bg-orange-100 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-orange-600">
+                <span>{t("needAttention")}</span>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">54%</div>
-              <p className="text-sm text-muted-foreground">{t("avgProgress")}</p>
+
+          <Card className="relative overflow-hidden hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {statsLoading ? <Skeleton className="h-8 w-12" /> : `${stats.avgProgress}%`}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{t("avgProgress")}</p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <Clock className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Progress 
+                  value={statsLoading ? 0 : stats.avgProgress} 
+                  className="h-2" 
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Projects Grid */}
+        {/* Projects Display */}
         {filteredProjects.length === 0 ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">{t("noProjectsFound")}</h3>
-            <p className="text-muted-foreground mb-4">
+          <div className="text-center py-16">
+            <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Search className="h-12 w-12 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">{t("noProjectsFound")}</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               {searchQuery ? t("noMatchingProjects") : t("noProjectsCreated")}
             </p>
-            <Button onClick={() => setShowAddModal(true)}>
+            <Button onClick={() => setShowAddModal(true)} size="lg" className="shadow-lg">
               <Plus className="h-4 w-4 mr-2" />
               {t("createFirstProject")}
             </Button>
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.map((project) => (
               <Card key={project.id} className="hover:shadow-md transition-shadow">
@@ -383,6 +548,77 @@ export default function Projects() {
                     >
                       {t("edit")}
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          // List View
+          <div className="space-y-4">
+            {filteredProjects.map((project) => (
+              <Card key={project.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-lg truncate">{project.name}</h3>
+                          <Badge variant={getStatusColor(project.status)} className="capitalize">
+                            {formatStatusLabel(project.status)}
+                          </Badge>
+                          {project.priority && (
+                            <Badge variant="outline" className="capitalize">
+                              {project.priority}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {project.client && project.client.first_name && project.client.last_name ?
+                              `${project.client.first_name} ${project.client.last_name}`
+                              : t("noClientAssigned")}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {project.estimated_end_date ? new Date(project.estimated_end_date).toLocaleDateString() : t("notSet")}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            ${(project.budget || 0).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditClick(project.id)}
+                      >
+                        {t("edit")}
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>{t("viewDetails")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditClick(project.id)}>{t("editProject")}</DropdownMenuItem>
+                          <DropdownMenuItem>{t("addPayment")}</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-red-600" 
+                            onClick={() => handleDeleteClick(project.id, project.name)}
+                          >
+                            {t("delete")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
