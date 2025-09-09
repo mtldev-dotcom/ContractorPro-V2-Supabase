@@ -289,20 +289,38 @@ export default function OnboardingPage() {
                 .update({
                     first_name: formData.first_name,
                     last_name: formData.last_name,
-                    phone: formData.user_phone
+                    phone: formData.user_phone,
+                    role: 'admin', // Ensure admin role is set
+                    updated_at: new Date().toISOString()
                 })
                 .eq('id', user.id)
 
             if (userError) {
                 console.error('User update error:', userError)
 
-                // If it's an RLS error, try a different approach
+                // If it's an RLS error, try creating the user record instead
                 if (userError.message.includes('infinite recursion') || userError.message.includes('policy')) {
-                    console.log('RLS policy error detected, attempting alternative update method...')
+                    console.log('RLS policy error detected, attempting to create user record...')
 
-                    // Try updating through a service role or different method
-                    // For now, we'll continue with the flow and let the user know
-                    console.warn('User profile update failed due to RLS policy, but continuing with onboarding...')
+                    // Try creating the user record with admin role
+                    const { error: insertError } = await supabase
+                        .from('users')
+                        .insert({
+                            id: user.id,
+                            email: user.email,
+                            first_name: formData.first_name,
+                            last_name: formData.last_name,
+                            phone: formData.user_phone,
+                            role: 'admin',
+                            is_active: true,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
+
+                    if (insertError && !insertError.message.includes('duplicate key')) {
+                        console.error('User insert error:', insertError)
+                        console.warn('User profile creation failed, but continuing with onboarding...')
+                    }
                 } else {
                     throw new Error(`Failed to update user profile: ${userError.message}`)
                 }

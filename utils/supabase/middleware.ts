@@ -45,11 +45,50 @@ export async function updateSession(request: NextRequest) {
     ? '/' + pathSegments.slice(1).join('/')
     : request.nextUrl.pathname
 
+  // Helper function to check if user needs onboarding
+  const checkUserNeedsOnboarding = async (userId: string) => {
+    try {
+      const { data: companyAssociations, error } = await supabase
+        .from('user_companies')
+        .select('*')
+        .eq('user_id', userId)
+        .limit(1)
+      
+      if (error) {
+        console.error('Error checking company associations:', error)
+        return true // Default to needing onboarding if we can't check
+      }
+      
+      return !companyAssociations || companyAssociations.length === 0
+    } catch (error) {
+      console.error('Error in checkUserNeedsOnboarding:', error)
+      return true
+    }
+  }
+
   // redirect authenticated user away from auth pages
   if (user && pathWithoutLocale.startsWith('/auth')) {
+    // Check if user needs onboarding
+    const needsOnboarding = await checkUserNeedsOnboarding(user.id)
+    
     const url = request.nextUrl.clone()
-    url.pathname = `/${locale}/dashboard`
+    if (needsOnboarding) {
+      url.pathname = `/${locale}/onboarding`
+    } else {
+      url.pathname = `/${locale}/dashboard`
+    }
     return NextResponse.redirect(url)
+  }
+
+  // For authenticated users accessing protected routes, check if they need onboarding
+  if (user && !pathWithoutLocale.startsWith('/onboarding') && !pathWithoutLocale.startsWith('/auth') && pathWithoutLocale !== '/') {
+    const needsOnboarding = await checkUserNeedsOnboarding(user.id)
+    
+    if (needsOnboarding) {
+      const url = request.nextUrl.clone()
+      url.pathname = `/${locale}/onboarding`
+      return NextResponse.redirect(url)
+    }
   }
 
   if (
