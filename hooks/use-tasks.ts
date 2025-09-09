@@ -120,8 +120,8 @@ export function useTasks(initial?: UseTasksOptions): UseTasksResult {
         projectIds.length > 0 
           ? supabase.from("projects_new").select("id,name,project_number").in("id", projectIds)
           : Promise.resolve({ data: [], error: null }),
-        employeeIds.length > 0
-          ? supabase.from("users").select("*").in("id", employeeIds)
+employeeIds.length > 0
+          ? supabase.from("users").select("id,first_name,last_name").in("id", employeeIds)
           : Promise.resolve({ data: [], error: null })
       ])
 
@@ -158,10 +158,12 @@ export function useTasks(initial?: UseTasksOptions): UseTasksResult {
           created_at: r.created_at ?? undefined,
           updated_at: r.updated_at ?? undefined,
           project: project ?? undefined,
-          assignee: employee ? {
+assignee: employee ? {
             id: employee.id,
-            user_id: employee.user_id,
-            users: employee.users
+            users: {
+              first_name: employee.first_name,
+              last_name: employee.last_name
+            }
           } : undefined,
         }
       })
