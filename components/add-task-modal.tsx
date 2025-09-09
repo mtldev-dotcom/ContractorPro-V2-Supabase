@@ -61,7 +61,7 @@ export function AddTaskModal({ open, onOpenChange }: AddTaskModalProps) {
       try {
         const [pRes, eRes] = await Promise.all([
           supabase.from("projects_new").select("id,name").order("name", { ascending: true }),
-          supabase.from("employees").select("id,user_id,users(id,first_name,last_name)").order("id", { ascending: true }),
+supabase.from("users").select("id,first_name,last_name").order("first_name", { ascending: true }),
         ])
 
         if (pRes.error) throw pRes.error
@@ -71,14 +71,11 @@ export function AddTaskModal({ open, onOpenChange }: AddTaskModalProps) {
         const eRows = (eRes.data || []) as any[]
 
         setProjects(pRows.map((r) => ({ id: r.id, name: r.name })))
-        setEmployees(
-          eRows.map((r) => {
-            const user = r.users
-            const name = user 
-              ? [user.first_name, user.last_name].filter(Boolean).join(" ").trim() || "Employee"
-              : "Employee"
+setEmployees(
+          eRes.data.map((r: any) => {
+            const name = [r.first_name, r.last_name].filter(Boolean).join(" ").trim() || "Employee"
             return { id: r.id, name }
-          }),
+          })
         )
       } catch (err: any) {
         toast({
